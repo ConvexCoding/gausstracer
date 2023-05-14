@@ -63,13 +63,16 @@
 	// define Gaussian beam operations
 	let gp: GaussOp[] = [];
 	gp.push(new GaussOp('distance', 300));
-	gp.push(new GaussOp('lens', 150, 1));
+	gp.push(new GaussOp('lens', 150, 1, 'green'));
+	//
 	gp.push(new GaussOp('distance', 150));
 	gp.push(new GaussOp('distance', 350));
+	// OR
 	//gp.push(new GaussOp('distance', 500));
-	gp.push(new GaussOp('lens', 350, 1));
+	//
+	gp.push(new GaussOp('lens', 350, 1, 'yellow'));
 	gp.push(new GaussOp('distance', 800));
-	gp.push(new GaussOp('lens', 400, 1));
+	gp.push(new GaussOp('lens', 400, 1, 'red'));
 	gp.push(new GaussOp('distance', 400));
 	gp.push(new GaussOp('distance', 20));
 
@@ -155,7 +158,7 @@
 		gp: GaussOp[],
 		waist: number,
 		wavelength: number
-	): [number[][], LatheGeometry[], number[], number[][]] {
+	): [number[][], LatheGeometry[], number[], number[][], string[]] {
 		let tsource = source.clone();
 		tsource.wavelength = wavelength;
 		tsource.waist = waist;
@@ -166,10 +169,11 @@
 		let zbase = 0;
 		let ztrack = 0;
 
-		let lenss: LatheGeometry[] = [];
-		let lensposi: number[][] = [];
+		let lensLatheGeo: LatheGeometry[] = [];
+		let lensPosi: number[][] = [];
 		let efls: number[] = [];
-		let eflposi: number[][] = [];
+		let eflLabelPosi: number[][] = [];
+		let lensColor: string[] = [];
 
 		gp.forEach((op) => {
 			switch (op.type) {
@@ -187,32 +191,27 @@
 					// parametric calculation in future
 					// genSolidLens(half_diameter, R1, R2, ct, scaleZ, scaleY)
 
-					lenss.push(genSolidLens(radius * 1.15, 4, -4, 1.5 * radius, scaleZ, scaleY));
-					lensposi.push([0, 0, toGrid(ztrack, zScale) - (1.5 * radius) / scaleZ / 2]);
+					lensLatheGeo.push(genSolidLens(radius * 1.15, 4, -4, 1.5 * radius, scaleZ, scaleY));
+					lensPosi.push([0, 0, toGrid(ztrack, zScale) - (1.5 * radius) / scaleZ / 2]);
 					efls.push(op.value);
-					eflposi.push([xoffset, 1.2 * radius * scaleY, toGrid(ztrack, zScale)]);
+					eflLabelPosi.push([xoffset, 1.2 * radius * scaleY, toGrid(ztrack, zScale)]);
+					lensColor.push(!op.color ? 'purple' : op.color);
 					break;
 			}
 			zbase = ztrack;
 		});
 
-		return [lensposi, lenss, efls, eflposi];
+		return [lensPosi, lensLatheGeo, efls, eflLabelPosi, lensColor];
 	}
 
 	// line data to plot beam trajectory + some data for final waist marker
-	$: data = genLineSegs(waistvalue, wavelvalue);
+	$: linedata = genLineSegs(waistvalue, wavelvalue);
 
 	// find min waists for labeling
 	$: wps = findMinWaists(waistvalue, wavelvalue);
 
 	// generate lens for plot
-	// This needs help on how to make this code
-	// a little tighter
 	$: lensdata = generateLensData(gp, waistvalue, wavelvalue);
-	$: lensposi = lensdata[0];
-	$: lenses = lensdata[1];
-	$: efls = lensdata[2];
-	$: eflposi = lensdata[3];
 
 	// generate grid lines
 	let gridLines = genGridLines2(xoffset, gridWidth, 6, gridHeight, 5);
@@ -246,27 +245,27 @@
 <T.Mesh>
 	<T
 		is={Line2}
-		geometry={genLineSegment(data[0])}
+		geometry={genLineSegment(linedata[0])}
 		material={new LineMaterial({ color: 0x0000ff, linewidth: 0.005 })}
 	/>
 	<T
 		is={Line2}
-		geometry={genLineSegment(data[1])}
+		geometry={genLineSegment(linedata[1])}
 		material={new LineMaterial({ color: 0x0000ff, linewidth: 0.005 })}
 	/>
 </T.Mesh>
 
-<!-- lenses -->
-{#if lenses.length > 0}
-	{#each { length: lenses.length } as _, index}
+<!-- lenses 	 [lensPosi, lensLatheGeo, efls, eflLabelPosi, lensColor]; -->
+{#if lensdata[0].length > 0}
+	{#each { length: lensdata[0].length } as _, index}
 		<T.Mesh
-			geometry={lenses[index]}
-			position={[lensposi[index][0], lensposi[index][1], lensposi[index][2]]}
+			geometry={lensdata[1][index]}
+			position={[lensdata[0][index][0], lensdata[0][index][1], lensdata[0][index][2]]}
 			rotation={[Math.PI / 2, 0, 0]}
 			let:ref
 		>
 			<T.MeshPhongMaterial
-				color={'red'}
+				color={lensdata[4][index]}
 				opacity={0.4}
 				transparent
 				side={DoubleSide}
@@ -275,11 +274,11 @@
 		</T.Mesh>
 		{#if showefls}
 			<T.Mesh
-				position={[eflposi[index][0], eflposi[index][1], eflposi[index][2]]}
+				position={[lensdata[3][index][0], lensdata[3][index][1], lensdata[3][index][2]]}
 				rotation.y={-Math.PI / 2}
 			>
 				<Text
-					text={'f = ' + efls[index].toFixed(0) + ' mm'}
+					text={'f = ' + lensdata[2][index].toFixed(0) + ' mm'}
 					color={0x000000}
 					fontSize={8}
 					anchorX={'center'}

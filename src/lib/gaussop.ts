@@ -5,19 +5,23 @@ export default class GaussOp {
   type: 'distance' | 'lens'
   value: number  
   index: number
+  color: string
 
   constructor(
     type: 'distance' | 'lens',
     value: number | string, 
     index: number | string = 1,
+    color = 'lightblue',
   ) {
     this.type = type
     this.value = ensureNumber(value)
-    this.index = ensureNumber(index)  }
+    this.index = ensureNumber(index)  
+    this.color = color
+  }
 
 
   clone() {
-    return new GaussOp(this.type, this.value, this.index)
+    return new GaussOp(this.type, this.value, this.index, this.color)
   }
 
   toMatrix2D()  {
