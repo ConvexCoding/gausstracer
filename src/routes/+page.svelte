@@ -1,7 +1,8 @@
 <!-- YOU CAN DELETE EVERYTHING IN THIS PAGE -->
 <script lang="ts">
-	import { Canvas, T } from '@threlte/core';
-	import NewScene from './NewScene.svelte';
+	import { Canvas } from '@threlte/core';
+	import NewScene from './TracerScene.svelte';
+	import TracerScene from './TracerScene.svelte';
 </script>
 
 <div class="flex flex-col mt-5 gap-0">
@@ -10,7 +11,7 @@
 	</div>
 	<div class="contents1">
 		<Canvas>
-			<NewScene />
+			<TracerScene />
 		</Canvas>
 	</div>
 </div>

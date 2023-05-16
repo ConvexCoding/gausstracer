@@ -1,8 +1,10 @@
 <script lang="ts">
-	import { OrbitControls } from '@threlte/extras';
+	import { OrbitControls, Text } from '@threlte/extras';
 	import { T } from '@threlte/core';
-	import { Text } from '@threlte/extras';
 	import { BufferGeometry, DoubleSide, LatheGeometry, LineDashedMaterial, Vector3 } from 'three';
+	import { Line2 } from 'three/examples/jsm/lines/Line2';
+	import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial';
+
 	import {
 		genLineSegment,
 		genSolidLens,
@@ -11,12 +13,9 @@
 		points2ArrayX,
 		genGridLines2
 	} from '$lib/mathUtils';
-	import { Line2 } from 'three/examples/jsm/lines/Line2';
-	import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial';
-
-	import { type Complex, Matrix2DxComplex, waistSize, beamProps } from '../lib/gcomplex';
-	import Source from '../lib/source';
-	import GaussOp from '../lib/gaussop';
+	import { type Complex, Matrix2DxComplex, waistSize, beamProps } from '$lib/gcomplex';
+	import Source from '$lib/source';
+	import GaussOp from '$lib/gaussop';
 
 	const w0 = 1;
 	const λ = 1.07;

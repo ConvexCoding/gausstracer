@@ -205,7 +205,6 @@ export function create3DPts(
   return array
 }
 
-
 export function genProfile2D(x: number[], y: number[]): Vector2[] {
   const vprofileData = []
   for (let i = x.length - 1; i > 0; i--) {
