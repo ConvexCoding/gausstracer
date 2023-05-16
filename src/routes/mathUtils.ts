@@ -2,7 +2,7 @@ import { Vector2, Vector3, BufferGeometry, BufferAttribute, LatheGeometry } from
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry'
 import { Lut } from 'three/examples/jsm/math/Lut'
 
-export function genLensLathe(ap: number, Radius1: number, Radius2: number, ct: number, xscale: number, yscale: number, divisionsperlensseg = 21, radialdivisions = 51) {
+export function genSolidLens(ap: number, Radius1: number, Radius2: number, ct: number, xscale: number, yscale: number, divisionsperlensseg = 21, radialdivisions = 51) {
   const pts1plus = []
   const pts2plus = []
   const step = ap / (divisionsperlensseg - 1)
@@ -12,8 +12,8 @@ export function genLensLathe(ap: number, Radius1: number, Radius2: number, ct: n
     const r = i * step
     const sag1 = Radius1 - Math.sqrt(Radius1*Radius1 - r*r)
     const sag2 = Math.sign(Radius2) * (Math.abs(Radius2) - Math.sqrt(Radius2*Radius2 - r*r))
-    pts1plus.push(new Vector2(r * yscale, sag1  / xscale))
-    pts2plus.push(new Vector2(r * yscale, (sag2 + ct) / xscale))
+    pts1plus.push(new Vector2(r * yscale, sag1 * xscale))
+    pts2plus.push(new Vector2(r * yscale, (sag2 + ct) * xscale))
   }
   return new LatheGeometry(pts1plus.concat(pts2plus.reverse()), radialdivisions, 0, Math.PI * 2)
 }
@@ -361,50 +361,6 @@ export function xyToVector(x: number[], y: number[]): Vector2[] {
   return data
 }
 
-export function grid2Quad(xoffset: number, gridWidth: number, gridHeight: number, xDivs = 5, yDivs = 5) {
-  const gridLines: Float32Array[] = []
-  // place central x and y axes first 2 elements of array
-  gridLines.push(new Float32Array([xoffset, 0, -gridWidth, xoffset, 0, gridWidth]))
-  gridLines.push(new Float32Array([xoffset, 0, 0, xoffset, gridHeight, 0]))
-
-  for (let i = 1; i <= yDivs; i++) {
-    gridLines.push(
-      new Float32Array([
-        xoffset,
-        (i * gridHeight) / yDivs,
-        -gridWidth,
-        xoffset,
-        (i * gridHeight) / yDivs,
-        gridWidth,
-      ])
-    )
-  }
-
-  for (let i = 1; i <= xDivs; i++) {
-    gridLines.push(
-      new Float32Array([
-        xoffset,
-        0,
-        (i * gridWidth) / xDivs,
-        xoffset,
-        gridHeight,
-        (i * gridWidth) / xDivs,
-      ])
-    )
-      gridLines.push(
-        new Float32Array([
-          xoffset,
-          0,
-          -(i * gridWidth) / xDivs,
-          xoffset,
-          gridHeight,
-          -(i * gridWidth) / xDivs,
-        ])
-      )
-  }
-  return gridLines
-}
-
 export function genGridLines(xoffset: number, gridWidth: number, gridHeight: number, numDiv = 5) {
   const gridLines: Float32Array[] = []
   // place central x and y axes first 2 elements of array
@@ -459,71 +415,46 @@ export function genGridLines(xoffset: number, gridWidth: number, gridHeight: num
   return gridLines
 }
 
-export function genGridLines2(xoffset: number, gridWidth: number, ndivWidth: number, gridHeight: number, ndivHeight: number) {
+export function grid2Quad(xoffset: number, gridWidth: number, gridHeight: number, xDivs = 5, yDivs = 5) {
   const gridLines: Float32Array[] = []
   // place central x and y axes first 2 elements of array
   gridLines.push(new Float32Array([xoffset, 0, -gridWidth, xoffset, 0, gridWidth]))
-  gridLines.push(new Float32Array([xoffset, -gridHeight, 0, xoffset, gridHeight, 0]))
+  gridLines.push(new Float32Array([xoffset, 0, 0, xoffset, gridHeight, 0]))
 
-  for (let i = 1; i <= ndivWidth; i++) {
+  for (let i = 1; i <= yDivs; i++) {
     gridLines.push(
       new Float32Array([
         xoffset,
-        (i * gridHeight) / ndivWidth,
+        (i * gridHeight) / yDivs,
         -gridWidth,
         xoffset,
-        (i * gridHeight) / ndivWidth,
+        (i * gridHeight) / yDivs,
         gridWidth,
       ])
     )
-      gridLines.push(
-        new Float32Array([
-          xoffset,
-          -(i * gridHeight) / ndivWidth,
-          -gridWidth,
-          xoffset,
-          -(i * gridHeight) / ndivWidth,
-          gridWidth,
-        ])
-      )
   }
 
-  for (let i = 1; i <= ndivHeight; i++) {
+  for (let i = 1; i <= xDivs; i++) {
     gridLines.push(
       new Float32Array([
         xoffset,
-        -gridHeight,
-        (i * gridWidth) / ndivHeight,
+        0,
+        (i * gridWidth) / xDivs,
         xoffset,
         gridHeight,
-        (i * gridWidth) / ndivHeight,
+        (i * gridWidth) / xDivs,
       ])
     )
       gridLines.push(
         new Float32Array([
           xoffset,
-          -gridHeight,
-          -(i * gridWidth) / ndivHeight,
+          0,
+          -(i * gridWidth) / xDivs,
           xoffset,
           gridHeight,
-          -(i * gridWidth) / ndivHeight,
+          -(i * gridWidth) / xDivs,
         ])
       )
   }
   return gridLines
-}
-
-export function points2ArrayX(x: number, y: number[], z: number[]): [Float32Array, Float32Array] {
-  const numPoints = y.length;
-  const pluslinesegs = new Float32Array(y.length * 3);
-  const neglinesegs = new Float32Array(y.length * 3);
-  for (let i = 0; i < numPoints; i++) {
-    pluslinesegs[i * 3] = x;
-    pluslinesegs[i * 3 + 1] = y[i];
-    pluslinesegs[i * 3 + 2] = z[i]; 
-    neglinesegs[i * 3] = x; 
-    neglinesegs[i * 3 + 1] = -y[i];
-    neglinesegs[i * 3 + 2] = z[i]; 
-  }
-  return [pluslinesegs, neglinesegs]
 }

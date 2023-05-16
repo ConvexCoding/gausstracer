@@ -1,7 +1,6 @@
 <!-- YOU CAN DELETE EVERYTHING IN THIS PAGE -->
 <script lang="ts">
 	import { Canvas } from '@threlte/core';
-	import NewScene from './TracerScene.svelte';
 	import TracerScene from './TracerScene.svelte';
 </script>
 

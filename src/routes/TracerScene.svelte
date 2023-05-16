@@ -7,7 +7,7 @@
 
 	import {
 		genLineSegment,
-		genSolidLens,
+		genLensLathe,
 		setAxisLimits,
 		toGrid,
 		points2ArrayX,
@@ -190,7 +190,7 @@
 					// parametric calculation in future
 					// genSolidLens(half_diameter, R1, R2, ct, scaleZ, scaleY)
 
-					lensLatheGeo.push(genSolidLens(radius * 1.15, 4, -4, 1.5 * radius, scaleZ, scaleY));
+					lensLatheGeo.push(genLensLathe(radius * 1.15, 4, -4, 1.5 * radius, scaleZ, scaleY));
 					lensPosi.push([0, 0, toGrid(ztrack, zScale) - (1.5 * radius) / scaleZ / 2]);
 					efls.push(op.value);
 					eflLabelPosi.push([xoffset, 1.2 * radius * scaleY, toGrid(ztrack, zScale)]);
