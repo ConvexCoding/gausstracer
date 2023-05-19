@@ -2,6 +2,12 @@ import { Vector2, Vector3, BufferGeometry, BufferAttribute, LatheGeometry } from
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry'
 import { Lut } from 'three/examples/jsm/math/Lut'
 
+function calcSag(radius: number, R: number, k: number): number {
+  const sag = (radius * radius / R) / (1 + Math.sqrt(1 - (1 + k) * Math.pow(radius, 2) / Math.pow(R, 2) ) );
+  return sag;
+}
+
+
 export function genLensLathe(ap: number, Radius1: number, Radius2: number, ct: number, xscale: number, yscale: number, divisionsperlensseg = 21, radialdivisions = 51) {
   const pts1plus = []
   const pts2plus = []
@@ -10,9 +16,11 @@ export function genLensLathe(ap: number, Radius1: number, Radius2: number, ct: n
   // define lens arc
   for (let i = 0; i < divisionsperlensseg; i++) {
     const r = i * step
-    const sag1 = Radius1 - Math.sqrt(Radius1*Radius1 - r*r)
-    const sag2 = Math.sign(Radius2) * (Math.abs(Radius2) - Math.sqrt(Radius2*Radius2 - r*r))
-    pts1plus.push(new Vector2(r * yscale, sag1  / xscale))
+    //const sag1 = Math.sign(Radius1) * (Math.abs(Radius1) - Math.sqrt(Radius1*Radius1 - r*r))
+    //const sag2 = Math.sign(Radius2) * (Math.abs(Radius2) - Math.sqrt(Radius2*Radius2 - r*r))
+    const sag1 = calcSag(r, Radius1, 0)
+    const sag2 = calcSag(r, Radius2, 0)
+    pts1plus.push(new Vector2(r * yscale, sag1 / xscale))
     pts2plus.push(new Vector2(r * yscale, (sag2 + ct) / xscale))
   }
   return new LatheGeometry(pts1plus.concat(pts2plus.reverse()), radialdivisions, 0, Math.PI * 2)

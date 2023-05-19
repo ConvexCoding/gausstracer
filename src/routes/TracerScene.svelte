@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { OrbitControls, Text } from '@threlte/extras';
+	import { OrbitControls, Text, interactivity } from '@threlte/extras';
 	import { T } from '@threlte/core';
 	import { BufferGeometry, DoubleSide, LatheGeometry, LineDashedMaterial, Vector3 } from 'three';
 	import { Line2 } from 'three/examples/jsm/lines/Line2';
 	import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial';
+	import { Editable } from '@threlte/theatre';
 
 	import {
 		genLineSegment,
@@ -16,6 +17,15 @@
 	import { type Complex, Matrix2DxComplex, waistSize, beamProps } from '$lib/gcomplex';
 	import Source from '$lib/source';
 	import GaussOp from '$lib/gaussop';
+	import Lens from './Lens.svelte';
+
+	import { forwardEventHandlers } from '@threlte/core';
+	import { useCursor } from '@threlte/extras';
+	import { spring } from 'svelte/motion';
+	const component = forwardEventHandlers();
+
+	const { target } = interactivity();
+	target.set(document.getElementById('int-target') ?? undefined);
 
 	const w0 = 1;
 	const λ = 1.07;
@@ -49,7 +59,11 @@
 
 	// set scale constants for w and z
 	const scaleZ = (2 * gridWidth) / (zend - zstart); // scale about -gridWith
+	console.log('🚀 ~ gridWidth:', gridWidth);
+	console.log('🚀 ~ scaleZ main:', scaleZ);
 	const scaleY = gridHeight / maxY; // scale about center of plot 0 in Y axis
+	console.log('🚀 ~ gridHeight:', gridHeight);
+	console.log('🚀 ~ scaleY main:', scaleY);
 
 	const xoffset = -2;
 
@@ -62,16 +76,16 @@
 	// define Gaussian beam operations
 	let gp: GaussOp[] = [];
 	gp.push(new GaussOp('distance', 300));
-	gp.push(new GaussOp('lens', 150, 1, 'green'));
+	gp.push(new GaussOp('lens', 150, 1, 'green')); // index 1
 	//
 	gp.push(new GaussOp('distance', 150));
 	gp.push(new GaussOp('distance', 350));
 	// OR
 	//gp.push(new GaussOp('distance', 500));
 	//
-	gp.push(new GaussOp('lens', 350, 1, 'yellow'));
+	gp.push(new GaussOp('lens', 350, 1, 'yellow')); // index 4
 	gp.push(new GaussOp('distance', 800));
-	gp.push(new GaussOp('lens', 400, 1, 'red'));
+	gp.push(new GaussOp('lens', 400, 1, 'red')); // index 6
 	gp.push(new GaussOp('distance', 400));
 	gp.push(new GaussOp('distance', 20));
 
@@ -157,7 +171,7 @@
 		gp: GaussOp[],
 		waist: number,
 		wavelength: number
-	): [number[][], LatheGeometry[], number[], number[][], string[]] {
+	): [number[][], LatheGeometry[], number[], number[][], string[], number[]] {
 		let tsource = source.clone();
 		tsource.wavelength = wavelength;
 		tsource.waist = waist;
@@ -173,6 +187,7 @@
 		let efls: number[] = [];
 		let eflLabelPosi: number[][] = [];
 		let lensColor: string[] = [];
+		let opacity: number[] = [];
 
 		gp.forEach((op) => {
 			switch (op.type) {
@@ -190,8 +205,19 @@
 					// parametric calculation in future
 					// genSolidLens(half_diameter, R1, R2, ct, scaleZ, scaleY)
 
-					lensLatheGeo.push(genLensLathe(radius * 1.15, 4, -4, 1.5 * radius, scaleZ, scaleY));
-					lensPosi.push([0, 0, toGrid(ztrack, zScale) - (1.5 * radius) / scaleZ / 2]);
+					let R = radius * 1.4;
+					let ct = 2 * radius;
+
+					if (op.value < 0) {
+						R = -R;
+						ct = 1;
+						opacity.push(0.25);
+					} else {
+						opacity.push(1.0);
+					}
+
+					lensLatheGeo.push(genLensLathe(radius * 1.15, R, -R, ct, scaleZ, scaleY));
+					lensPosi.push([0, 0, toGrid(ztrack, zScale) - (2.5 * radius) / scaleZ / 2]);
 					efls.push(op.value);
 					eflLabelPosi.push([xoffset, 1.2 * radius * scaleY, toGrid(ztrack, zScale)]);
 					lensColor.push(!op.color ? 'purple' : op.color);
@@ -199,8 +225,8 @@
 			}
 			zbase = ztrack;
 		});
-
-		return [lensPosi, lensLatheGeo, efls, eflLabelPosi, lensColor];
+		console.log(opacity);
+		return [lensPosi, lensLatheGeo, efls, eflLabelPosi, lensColor, opacity];
 	}
 
 	// line data to plot beam trajectory + some data for final waist marker
@@ -220,13 +246,50 @@
 
 	const showefls = true;
 	const showwaists = true;
+
+	let lensScale: [number, number, number] = [1, 1, 1];
+	let backupcolor = 'black';
+	const gplensmap: number[] = [];
+	const gplinemap: number[] = [];
+
+	gp.forEach((element, index) => {
+		if (element.type === 'lens') {
+			gplensmap.push(index);
+		} else {
+			gplinemap.push(index);
+		}
+	});
+
+	function onEnter(n: number) {
+		console.log('enter index is ', n);
+		backupcolor = gp[gplensmap[n]].color;
+		gp[gplensmap[n]].color = 'black';
+	}
+
+	function onLeave(n: number) {
+		console.log('leave index is ', n);
+		gp[gplensmap[n]].color = backupcolor;
+	}
+
+	let lineWidth = 0.005;
+	let lineColor = 0x0000ff;
+
+	function onLineEnter(n: number) {
+		lineWidth = 0.01;
+	}
+	function onLineLeave(n: number) {
+		lineWidth = 0.005;
+	}
 </script>
+
+<Lens radius={2} {scaleY} {scaleZ} position={[0, 0, 0]} efl={-100} color={'red'} />
+<Lens radius={2} {scaleY} {scaleZ} position={[0, 0, 50]} efl={100} color={'red'} />
 
 <!-- Add Camera -->
 <T.OrthographicCamera
 	makeDefault
 	position={[-100, 0, 0]}
-	scale={1}
+	scale={0.5}
 	on:create={({ ref }) => {
 		ref.lookAt(0, 0, 0);
 	}}
@@ -245,14 +308,33 @@
 	<T
 		is={Line2}
 		geometry={genLineSegment(linedata[0])}
-		material={new LineMaterial({ color: 0x0000ff, linewidth: 0.005 })}
+		material={new LineMaterial({ color: 0x0000ff, linewidth: lineWidth })}
+		on:pointerenter={onLineEnter}
+		on:pointerleave={onLineLeave}
 	/>
 	<T
 		is={Line2}
 		geometry={genLineSegment(linedata[1])}
-		material={new LineMaterial({ color: 0x0000ff, linewidth: 0.005 })}
+		material={new LineMaterial({ color: 0x0000ff, linewidth: lineWidth })}
+		on:pointerenter={onLineEnter}
+		on:pointerleave={onLineLeave}
 	/>
 </T.Mesh>
+
+<!--
+  {#each gp as g, index}
+	{#if g.type === 'lens'}
+		<Lens
+			radius={1.5}
+			{scaleY}
+			{scaleZ}
+			position={[0, 0, -250 + index * 10]}
+			color={g.color}
+			efl={g.value}
+		/>
+	{/if}
+{/each}
+-->
 
 <!-- lenses 	 [lensPosi, lensLatheGeo, efls, eflLabelPosi, lensColor]; -->
 {#if lensdata[0].length > 0}
@@ -261,11 +343,16 @@
 			geometry={lensdata[1][index]}
 			position={[lensdata[0][index][0], lensdata[0][index][1], lensdata[0][index][2]]}
 			rotation={[Math.PI / 2, 0, 0]}
+			scale={lensScale}
+			on:pointerenter={() => onEnter(index)}
+			on:pointerleave={() => onLeave(index)}
+			on:click={() => onLeave(index)}
 			let:ref
 		>
+			<!--			<Editable name="Lens" scale />-->
 			<T.MeshPhongMaterial
 				color={lensdata[4][index]}
-				opacity={0.4}
+				opacity={lensdata[5][index]}
 				transparent
 				side={DoubleSide}
 				shininess={100}
@@ -322,13 +409,13 @@
 {/if}
 
 <!-- background plane - in this case along Y-Z aaxis -->
-<T.Mesh position={[0, 0, 0]} rotation={[0, 0, 0]} visible={true}>
+<T.Mesh position={[100, 0, 0]} rotation={[0, 0, 0]} visible={true}>
 	<T.BoxGeometry args={[1, 2 * gridHeight + 50, 2 * gridWidth + 50]} />
 	<T.MeshStandardMaterial side={DoubleSide} color={'white'} transparent opacity={1} />
 </T.Mesh>
 
 <!-- add background grid lines -->
-<T.Mesh visible={true}>
+<T.Mesh position={[100, 0, 0]} visible={true}>
 	{#each gridLines as line}
 		<T
 			is={Line2}
@@ -344,7 +431,7 @@
 </T.Mesh>
 
 <!-- add various axis labels -->
-<T.Group visible={true}>
+<T.Group position={[100, 0, 0]} visible={true}>
 	<!-- add axis label for Ymax at Xmax -->
 	<T.Mesh position={[xoffset, gridHeight, gridWidth]} rotation={[0, -Math.PI / 2, 0]}>
 		<Text
@@ -414,6 +501,7 @@
 </T.Group>
 
 <!-- Title -->
-<T.Mesh position={[xoffset, gridHeight, -gridWidth]} rotation.y={-Math.PI / 2} visible={true}>
+<T.Mesh position={[xoffset + 100, gridHeight, -gridWidth]} rotation.y={-Math.PI / 2} visible={true}>
+	<!--	<Editable name="title" scale visible />-->
 	<Text text={titletext} color={'black'} fontSize={12} anchorX={'left'} anchorY={'bottom'} />
 </T.Mesh>
