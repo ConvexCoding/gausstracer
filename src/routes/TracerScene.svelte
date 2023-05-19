@@ -5,6 +5,7 @@
 	import { Line2 } from 'three/examples/jsm/lines/Line2';
 	import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial';
 	import { Editable } from '@threlte/theatre';
+	import LightsCamera from './LightsCamera.svelte';
 
 	import {
 		genLineSegment,
@@ -55,7 +56,7 @@
 	let zrtemp = source.rayleighDistance();
 	let maxY = w0 * Math.sqrt(1 + (zend / zrtemp) * (zend / zrtemp)); // max waist size needed for scale chart
 	maxY = setAxisLimits(0, maxY, zinc)[1]; // round up to nearest logical chart scale
-	maxY = 3; // override for now
+	maxY = 4; // override for now
 
 	// set scale constants for w and z
 	const scaleZ = (2 * gridWidth) / (zend - zstart); // scale about -gridWith
@@ -171,7 +172,7 @@
 		gp: GaussOp[],
 		waist: number,
 		wavelength: number
-	): [number[][], LatheGeometry[], number[], number[][], string[], number[]] {
+	): [number[], number[][], string[], number[], number[][]] {
 		let tsource = source.clone();
 		tsource.wavelength = wavelength;
 		tsource.waist = waist;
@@ -182,12 +183,17 @@
 		let zbase = 0;
 		let ztrack = 0;
 
-		let lensLatheGeo: LatheGeometry[] = [];
+		/*
+      radius={1.5}
+			position={[lensdata[0][index][0], lensdata[0][index][1], lensdata[0][index][2]]}
+			color={'purple'}
+			efl={100}
+    */
+		let radius: number[] = [];
 		let lensPosi: number[][] = [];
+		let lensColor: string[] = [];
 		let efls: number[] = [];
 		let eflLabelPosi: number[][] = [];
-		let lensColor: string[] = [];
-		let opacity: number[] = [];
 
 		gp.forEach((op) => {
 			switch (op.type) {
@@ -197,36 +203,17 @@
 					break;
 				case 'lens':
 					p = Matrix2DxComplex(op.toMatrix2D(), p);
-					const radius = waistSize(p, tsource, n);
-
-					// this looks a little funny but due to unusual scaling
-					// make the thickness be half the diameter
-					// arbitrarily use 4 as radii, but this needs to be a
-					// parametric calculation in future
-					// genSolidLens(half_diameter, R1, R2, ct, scaleZ, scaleY)
-
-					let R = radius * 1.4;
-					let ct = 2 * radius;
-
-					if (op.value < 0) {
-						R = -R;
-						ct = 1;
-						opacity.push(0.25);
-					} else {
-						opacity.push(1.0);
-					}
-
-					lensLatheGeo.push(genLensLathe(radius * 1.15, R, -R, ct, scaleZ, scaleY));
-					lensPosi.push([0, 0, toGrid(ztrack, zScale) - (2.5 * radius) / scaleZ / 2]);
-					efls.push(op.value);
-					eflLabelPosi.push([xoffset, 1.2 * radius * scaleY, toGrid(ztrack, zScale)]);
+					const rtemp = waistSize(p, tsource, n);
+					radius.push(rtemp * 1.15);
+					lensPosi.push([0, 0, toGrid(ztrack, zScale)]);
 					lensColor.push(!op.color ? 'purple' : op.color);
+					efls.push(op.value);
+					eflLabelPosi.push([xoffset, 1.2 * rtemp * scaleY, toGrid(ztrack, zScale)]);
 					break;
 			}
 			zbase = ztrack;
 		});
-		console.log(opacity);
-		return [lensPosi, lensLatheGeo, efls, eflLabelPosi, lensColor, opacity];
+		return [radius, lensPosi, lensColor, efls, eflLabelPosi];
 	}
 
 	// line data to plot beam trajectory + some data for final waist marker
@@ -236,10 +223,10 @@
 	$: wps = findMinWaists(waistvalue, wavelvalue);
 
 	// generate lens for plot
-	$: lensdata = generateLensData(gp, waistvalue, wavelvalue);
+	$: lenses = generateLensData(gp, waistvalue, wavelvalue);
 
 	// generate grid lines
-	let gridLines = genGridLines2(xoffset, gridWidth, 6, gridHeight, 5);
+	let gridLines = genGridLines2(xoffset, gridWidth, 8, gridHeight, 5);
 
 	// location of waist on grid in gridunits
 	$: zWaistGridUnits = toGrid(0, zScale);
@@ -247,8 +234,6 @@
 	const showefls = true;
 	const showwaists = true;
 
-	let lensScale: [number, number, number] = [1, 1, 1];
-	let backupcolor = 'black';
 	const gplensmap: number[] = [];
 	const gplinemap: number[] = [];
 
@@ -260,19 +245,7 @@
 		}
 	});
 
-	function onEnter(n: number) {
-		console.log('enter index is ', n);
-		backupcolor = gp[gplensmap[n]].color;
-		gp[gplensmap[n]].color = 'black';
-	}
-
-	function onLeave(n: number) {
-		console.log('leave index is ', n);
-		gp[gplensmap[n]].color = backupcolor;
-	}
-
 	let lineWidth = 0.005;
-	let lineColor = 0x0000ff;
 
 	function onLineEnter(n: number) {
 		lineWidth = 0.01;
@@ -282,26 +255,8 @@
 	}
 </script>
 
-<Lens radius={2} {scaleY} {scaleZ} position={[0, 0, 0]} efl={-100} color={'red'} />
-<Lens radius={2} {scaleY} {scaleZ} position={[0, 0, 50]} efl={100} color={'red'} />
-
-<!-- Add Camera -->
-<T.OrthographicCamera
-	makeDefault
-	position={[-100, 0, 0]}
-	scale={0.5}
-	on:create={({ ref }) => {
-		ref.lookAt(0, 0, 0);
-	}}
->
-	<OrbitControls enableZoom enableRotate={true} enablePan={true} />
-</T.OrthographicCamera>
-
-<!-- Add Lights -->
-<T.DirectionalLight position={[-100, 0, 0]} intensity={0.75} />
-<T.DirectionalLight position={[0, 100, 0]} intensity={0.2} />
-<T.DirectionalLight position={[0, -100, 0]} intensity={0.2} />
-<T.AmbientLight intensity={0.5} />
+<!-- Add Camera and Lights-->
+<LightsCamera />
 
 <!-- plus & negative waist profile lines -->
 <T.Mesh>
@@ -321,57 +276,17 @@
 	/>
 </T.Mesh>
 
-<!--
-  {#each gp as g, index}
-	{#if g.type === 'lens'}
+<!-- lenses  -->
+{#if lenses[0].length > 0}
+	{#each { length: lenses[0].length } as _, index}
 		<Lens
-			radius={1.5}
+			radius={lenses[0][index]}
 			{scaleY}
 			{scaleZ}
-			position={[0, 0, -250 + index * 10]}
-			color={g.color}
-			efl={g.value}
+			position={[lenses[1][index][0], lenses[1][index][1], lenses[1][index][2]]}
+			color={lenses[2][index]}
+			efl={lenses[3][index]}
 		/>
-	{/if}
-{/each}
--->
-
-<!-- lenses 	 [lensPosi, lensLatheGeo, efls, eflLabelPosi, lensColor]; -->
-{#if lensdata[0].length > 0}
-	{#each { length: lensdata[0].length } as _, index}
-		<T.Mesh
-			geometry={lensdata[1][index]}
-			position={[lensdata[0][index][0], lensdata[0][index][1], lensdata[0][index][2]]}
-			rotation={[Math.PI / 2, 0, 0]}
-			scale={lensScale}
-			on:pointerenter={() => onEnter(index)}
-			on:pointerleave={() => onLeave(index)}
-			on:click={() => onLeave(index)}
-			let:ref
-		>
-			<!--			<Editable name="Lens" scale />-->
-			<T.MeshPhongMaterial
-				color={lensdata[4][index]}
-				opacity={lensdata[5][index]}
-				transparent
-				side={DoubleSide}
-				shininess={100}
-			/>
-		</T.Mesh>
-		{#if showefls}
-			<T.Mesh
-				position={[lensdata[3][index][0], lensdata[3][index][1], lensdata[3][index][2]]}
-				rotation.y={-Math.PI / 2}
-			>
-				<Text
-					text={'f = ' + lensdata[2][index].toFixed(0) + ' mm'}
-					color={0x000000}
-					fontSize={8}
-					anchorX={'center'}
-					anchorY={'bottom'}
-				/>
-			</T.Mesh>
-		{/if}
 	{/each}
 {/if}
 
@@ -399,7 +314,7 @@
 				<Text
 					text={'Waist: ' + wp.waist.toFixed(3) + ' mm'}
 					color={'black'}
-					fontSize={10}
+					fontSize={8}
 					anchorX={'center'}
 					anchorY={'top'}
 				/>
