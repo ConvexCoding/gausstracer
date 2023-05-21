@@ -1,51 +1,60 @@
 <script lang="ts">
-	import { OrbitControls, Text, interactivity } from '@threlte/extras';
+	import { Text, interactivity } from '@threlte/extras';
 	import { T } from '@threlte/core';
 	import { BufferGeometry, DoubleSide, LatheGeometry, LineDashedMaterial, Vector3 } from 'three';
 	import { Line2 } from 'three/examples/jsm/lines/Line2';
 	import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial';
-	import { Editable } from '@threlte/theatre';
 	import LightsCamera from './LightsCamera.svelte';
 
 	import {
 		genLineSegment,
-		genLensLathe,
 		setAxisLimits,
 		toGrid,
 		points2ArrayX,
-		genGridLines2
+		genGridLines2,
+		saveTextToFile,
+		converXYtoString
 	} from '$lib/mathUtils';
 	import { type Complex, Matrix2DxComplex, waistSize, beamProps } from '$lib/gcomplex';
 	import Source from '$lib/source';
-	import GaussOp from '$lib/gaussop';
+	import type GaussOp from '$lib/gaussop';
 	import Lens from './Lens.svelte';
 
-	import { forwardEventHandlers } from '@threlte/core';
-	import { useCursor } from '@threlte/extras';
-	import { spring } from 'svelte/motion';
-	const component = forwardEventHandlers();
+	export let gp: GaussOp[] = [];
+	export let source: Source = new Source(1.07, 1, 0, 3);
 
-	const { target } = interactivity();
-	target.set(document.getElementById('int-target') ?? undefined);
-
-	const w0 = 1;
-	const λ = 1.07;
-	const msq = 3;
 	const n = 1;
-	const zstart = 0;
-	const zend = 2000;
-	const zinc = 1;
-
 	let titletext = 'Gaussian Beam Tracer';
 
-	const source: Source = new Source(w0, λ, 0, msq);
+	const zstart = 0;
+	const zinc = 1;
+	let zend = 0;
+	gp.forEach((op) => {
+		if (op.type == 'distance') zend += op.value;
+	});
+
 	// define slider values for input waist, wavelength, lens focal length, and lens position
-	let waistvalue = w0;
-	let wavelvalue = λ;
+	let waistvalue = source.waist;
+	let wavelvalue = source.wavelength;
 
 	// displayed chart in pixels
 	const gridWidth = 250; // total grid width = 2 * gridWidth
+	const horizDivs = 8;
 	const gridHeight = 75; // total grid height = 2 * gridHeight
+	const vertDivs = 5;
+
+	// set up labels for horizontal axis
+	const horizlabels: number[] = [];
+	for (let i = 0; i <= 2 * gridWidth; i += gridWidth / vertDivs) {
+		horizlabels.push(i);
+	}
+
+	const verticallabels: number[] = [];
+	for (let i = -gridHeight; i <= gridHeight; i += (2 * gridHeight) / horizDivs) {
+		verticallabels.push(i);
+	}
+	console.log('🚀 ~ gridHeight / horizDivs:', gridHeight / horizDivs);
+	console.log('verticallabels', verticallabels);
 
 	const zScale = [
 		[zstart, zend],
@@ -54,17 +63,13 @@
 
 	// Calculate start values for maxY and scales and ratios
 	let zrtemp = source.rayleighDistance();
-	let maxY = w0 * Math.sqrt(1 + (zend / zrtemp) * (zend / zrtemp)); // max waist size needed for scale chart
+	let maxY = source.waist * Math.sqrt(1 + (zend / zrtemp) * (zend / zrtemp)); // max waist size needed for scale chart
 	maxY = setAxisLimits(0, maxY, zinc)[1]; // round up to nearest logical chart scale
 	maxY = 4; // override for now
 
 	// set scale constants for w and z
 	const scaleZ = (2 * gridWidth) / (zend - zstart); // scale about -gridWith
-	console.log('🚀 ~ gridWidth:', gridWidth);
-	console.log('🚀 ~ scaleZ main:', scaleZ);
 	const scaleY = gridHeight / maxY; // scale about center of plot 0 in Y axis
-	console.log('🚀 ~ gridHeight:', gridHeight);
-	console.log('🚀 ~ scaleY main:', scaleY);
 
 	const xoffset = -2;
 
@@ -73,22 +78,6 @@
 		yscaled: number;
 		zscaled: number;
 	}
-
-	// define Gaussian beam operations
-	let gp: GaussOp[] = [];
-	gp.push(new GaussOp('distance', 300));
-	gp.push(new GaussOp('lens', 150, 1, 'green')); // index 1
-	//
-	gp.push(new GaussOp('distance', 150));
-	gp.push(new GaussOp('distance', 350));
-	// OR
-	//gp.push(new GaussOp('distance', 500));
-	//
-	gp.push(new GaussOp('lens', 350, 1, 'yellow')); // index 4
-	gp.push(new GaussOp('distance', 800));
-	gp.push(new GaussOp('lens', 400, 1, 'red')); // index 6
-	gp.push(new GaussOp('distance', 400));
-	gp.push(new GaussOp('distance', 20));
 
 	// main function for computing lens segs
 	function genLineSegs(waist: number, wavelength: number): [Float32Array, Float32Array] {
@@ -99,30 +88,39 @@
 		let zrj = tsource.rayleighDistance();
 		let p: Complex = { real: 0, imag: zrj };
 
+		const zsave: number[] = [];
+		const wsave: number[] = [];
 		const z: number[] = [];
 		const w: number[] = [];
 
 		let zbase = 0; // local beam path used to find waist
 		let ztrack = 0; // this tracks the beam path in world z
-
+		let offset = 0;
 		gp.forEach((op) => {
 			switch (op.type) {
 				case 'distance':
 					for (let d = 0; d <= op.value; d += zinc) {
-						p.real += zinc;
+						p.real = d + offset;
 						ztrack = zbase + d;
 						let wsize = waistSize(p, tsource, n);
+						zsave.push(ztrack);
+						wsave.push(wsize);
 						z.push(toGrid(ztrack, zScale));
 						w.push(wsize * scaleY);
 					}
+					offset = p.real; // do this in case the next surface is distance and not a lens
 					break;
 				case 'lens':
 					p = Matrix2DxComplex(op.toMatrix2D(), p);
+					const props = beamProps(p, tsource, n);
+					//[znew, minwaist, roc, wz];
+					offset = props[0];
 					break;
 			}
 			zbase = ztrack;
 		});
 
+		//saveTextToFile(converXYtoString(zsave, wsave), 'z-w.txt');
 		const [plussegs, negsegs] = points2ArrayX(xoffset, w, z);
 		return [plussegs, negsegs];
 	}
@@ -226,7 +224,7 @@
 	$: lenses = generateLensData(gp, waistvalue, wavelvalue);
 
 	// generate grid lines
-	let gridLines = genGridLines2(xoffset, gridWidth, 8, gridHeight, 5);
+	let gridLines = genGridLines2(xoffset, gridWidth, horizDivs, gridHeight, vertDivs);
 
 	// location of waist on grid in gridunits
 	$: zWaistGridUnits = toGrid(0, zScale);
@@ -253,10 +251,12 @@
 	function onLineLeave(n: number) {
 		lineWidth = 0.005;
 	}
+
+	let hscaleValues: number[] = [];
 </script>
 
 <!-- Add Camera and Lights-->
-<LightsCamera />
+<LightsCamera scale={0.5} />
 
 <!-- plus & negative waist profile lines -->
 <T.Mesh>
@@ -325,7 +325,7 @@
 
 <!-- background plane - in this case along Y-Z aaxis -->
 <T.Mesh position={[100, 0, 0]} rotation={[0, 0, 0]} visible={true}>
-	<T.BoxGeometry args={[1, 2 * gridHeight + 50, 2 * gridWidth + 50]} />
+	<T.BoxGeometry args={[1, 2 * gridHeight + 50, 2 * gridWidth + 100]} />
 	<T.MeshStandardMaterial side={DoubleSide} color={'white'} transparent opacity={1} />
 </T.Mesh>
 
@@ -347,21 +347,14 @@
 
 <!-- add various axis labels -->
 <T.Group position={[100, 0, 0]} visible={true}>
-	<!-- add axis label for Ymax at Xmax -->
-	<T.Mesh position={[xoffset, gridHeight, gridWidth]} rotation={[0, -Math.PI / 2, 0]}>
+	<!-- add axis label for Waist at X0 -->
+	<T.Mesh
+		position={[xoffset, source.waist * scaleY, zWaistGridUnits]}
+		rotation.y={-Math.PI / 2}
+		visible={false}
+	>
 		<Text
-			text={maxY.toFixed(2) + ' mm'}
-			color={0x000000}
-			fontSize={8}
-			anchorX={'center'}
-			anchorY={'bottom'}
-		/>
-	</T.Mesh>
-
-	<!-- add axis label for (-)Ymin at Xmax -->
-	<T.Mesh position={[xoffset, -gridHeight, gridWidth]} rotation.y={-Math.PI / 2}>
-		<Text
-			text={'-' + maxY.toFixed(2) + ' mm'}
+			text={waistvalue.toFixed(2)}
 			color={0x000000}
 			fontSize={8}
 			anchorX={'center'}
@@ -369,21 +362,14 @@
 		/>
 	</T.Mesh>
 
-	<!-- add axis label for Ymax at X0 -->
-	<T.Mesh position={[xoffset, w0 * scaleY, zWaistGridUnits]} rotation.y={-Math.PI / 2}>
+	<!-- add axis label for (-)Waist at X0 -->
+	<T.Mesh
+		position={[xoffset, -source.waist * scaleY, zWaistGridUnits]}
+		rotation.y={-Math.PI / 2}
+		visible={false}
+	>
 		<Text
-			text={waistvalue.toFixed(2) + ' mm'}
-			color={0x000000}
-			fontSize={8}
-			anchorX={'center'}
-			anchorY={'top'}
-		/>
-	</T.Mesh>
-
-	<!-- add axis label for (-)Ymin at X0 -->
-	<T.Mesh position={[xoffset, -w0 * scaleY, zWaistGridUnits]} rotation.y={-Math.PI / 2}>
-		<Text
-			text={'-' + waistvalue.toFixed(2) + ' mm'}
+			text={'-' + waistvalue.toFixed(2)}
 			color={0x000000}
 			fontSize={8}
 			anchorX={'center'}
@@ -391,32 +377,33 @@
 		/>
 	</T.Mesh>
 
-	<!-- z0 Distance Label -->
+	<!-- horizontal axis labels -->
+	{#each horizlabels as hl}
+		<T.Mesh position={[xoffset, -gridHeight, hl - 250]} rotation.y={-Math.PI / 2}>
+			<Text
+				text={(hl / scaleZ).toFixed(0)}
+				color={0x000000}
+				fontSize={8}
+				anchorX={'center'}
+				anchorY={'top'}
+			/>
+		</T.Mesh>
+	{/each}
 
-	<T.Mesh position={[xoffset, 0, -gridWidth]} rotation.y={-Math.PI / 2} visible={false}>
-		<Text
-			text={'z = ' + zstart.toFixed(0) + ' mm -->'}
-			color={0x000000}
-			fontSize={8}
-			anchorX={'left'}
-			anchorY={'bottom'}
-		/>
-	</T.Mesh>
-
-	<!-- Max z Distance Label -->
-	<T.Mesh position={[xoffset, 0, gridWidth]} rotation.y={-Math.PI / 2} visible={true}>
-		<Text
-			text={'z = ' + zend.toFixed(0) + ' mm -->'}
-			color={0x000000}
-			fontSize={8}
-			anchorX={'right'}
-			anchorY={'bottom'}
-		/>
-	</T.Mesh>
+	{#each verticallabels as vl}
+		<T.Mesh position={[xoffset, vl, -gridWidth - 5]} rotation.y={-Math.PI / 2}>
+			<Text
+				text={(vl / scaleY).toFixed(2)}
+				color={0x000000}
+				fontSize={8}
+				anchorX={'right'}
+				anchorY={'middle'}
+			/>
+		</T.Mesh>
+	{/each}
 </T.Group>
 
 <!-- Title -->
 <T.Mesh position={[xoffset + 100, gridHeight, -gridWidth]} rotation.y={-Math.PI / 2} visible={true}>
-	<!--	<Editable name="title" scale visible />-->
 	<Text text={titletext} color={'black'} fontSize={12} anchorX={'left'} anchorY={'bottom'} />
 </T.Mesh>

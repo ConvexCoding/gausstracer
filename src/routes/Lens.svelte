@@ -14,8 +14,12 @@
 	export let showefls: boolean = true;
 
 	let R = radius * 1.4;
-	let ct = 2 * radius;
+	let ct = 2 * radius * 2 * scaleZ;
 	let opacity = 1;
+
+	// scaleZ = real / pixels
+	// ctpixels = 10 pixels
+	// ctreal = 10 * scaleZ
 
 	if (efl < 0) {
 		R = -R;
@@ -23,7 +27,7 @@
 		opacity = 0.25;
 	}
 
-	let lensPosi: [number, number, number] = [position[0], position[1], position[2] - 2 * ct];
+	let lensPosi: [number, number, number] = [position[0], position[1], position[2]];
 
 	let eflLabelPosi: [number, number, number] = [-3, 1.05 * radius * scaleY, position[2]];
 
@@ -49,7 +53,6 @@
 	on:click={onLeave}
 	let:ref
 >
-	<!--<Editable name="Lens" scale /> -->
 	<T.MeshPhongMaterial {color} {opacity} transparent side={DoubleSide} shininess={100} />
 </T.Mesh>
 

@@ -18,8 +18,8 @@ export function genLensLathe(ap: number, Radius1: number, Radius2: number, ct: n
     const r = i * step
     //const sag1 = Math.sign(Radius1) * (Math.abs(Radius1) - Math.sqrt(Radius1*Radius1 - r*r))
     //const sag2 = Math.sign(Radius2) * (Math.abs(Radius2) - Math.sqrt(Radius2*Radius2 - r*r))
-    const sag1 = calcSag(r, Radius1, 0)
-    const sag2 = calcSag(r, Radius2, 0)
+    const sag1 = calcSag(r, Radius1, 0) - ct / 2
+    const sag2 = calcSag(r, Radius2, 0) - ct / 2
     pts1plus.push(new Vector2(r * yscale, sag1 / xscale))
     pts2plus.push(new Vector2(r * yscale, (sag2 + ct) / xscale))
   }
@@ -252,6 +252,14 @@ export function saveTextToFile(dataStr: string, filename: string) {
   a.href = window.URL.createObjectURL(new Blob([dataStr], { type: 'text/plain' }))
   a.download = filename
   a.click()
+}
+
+export function converXYtoString(x: number[], y: number[]): string {
+  let str = ''
+  for (let i = 0; i < x.length; i++) {
+    str += x[i] + ', ' + y[i] + '\n'
+  }
+  return str
 }
 
 function getExponent(x: number) {

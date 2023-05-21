@@ -1,12 +1,14 @@
 <script>
 	import { OrbitControls, Text, interactivity } from '@threlte/extras';
 	import { T } from '@threlte/core';
+
+	export let scale = 1.0;
 </script>
 
 <T.OrthographicCamera
 	makeDefault
 	position={[-100, 0, 0]}
-	scale={0.5}
+	{scale}
 	on:create={({ ref }) => {
 		ref.lookAt(0, 0, 0);
 	}}
