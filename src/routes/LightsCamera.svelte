@@ -2,18 +2,22 @@
 	import { OrbitControls, Text, interactivity } from '@threlte/extras';
 	import { T } from '@threlte/core';
 
-	export let scale = 1.0;
+	export let scale = 0.75;
+
+	const zoomOn = false;
+	const rotateOn = true;
+	const panOn = true;
 </script>
 
 <T.OrthographicCamera
 	makeDefault
-	position={[-100, 0, 0]}
+	position={[-300, 0, 0]}
 	{scale}
 	on:create={({ ref }) => {
 		ref.lookAt(0, 0, 0);
 	}}
 >
-	<OrbitControls enableZoom enableRotate={true} enablePan={true} />
+	<OrbitControls enableZoom={zoomOn} enableRotate={rotateOn} enablePan={panOn} />
 </T.OrthographicCamera>
 
 <!-- Add Lights -->

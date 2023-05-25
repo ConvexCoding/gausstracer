@@ -19,7 +19,6 @@ export default class GaussOp {
     this.color = color
   }
 
-
   clone() {
     return new GaussOp(this.type, this.value, this.index, this.color)
   }

@@ -3,20 +3,20 @@
 	import { T } from '@threlte/core';
 	import { DoubleSide, LatheGeometry } from 'three';
 	import { Editable } from '@threlte/theatre';
-	import { genLensLathe } from '$lib/mathUtils';
+	import { genLensLathe, calcSag } from '$lib/mathUtils';
 
 	export let radius: number = 1;
 	export let scaleZ: number = 1;
 	export let scaleY: number = 1;
-	export let position: [number, number, number] = [0, 0, 0];
+	export let position: [number, number, number];
 	export let color: string = 'black';
 	export let efl: number = 100;
 	export let showefls: boolean = true;
 
 	let R = radius * 1.4;
-	let ct = 2 * radius * 2 * scaleZ;
 	let opacity = 1;
-
+	let sag1 = calcSag(radius, R, 0);
+	let ct = 2 * sag1 + 5 * scaleZ;
 	// scaleZ = real / pixels
 	// ctpixels = 10 pixels
 	// ctreal = 10 * scaleZ
@@ -28,7 +28,7 @@
 	}
 
 	let lensPosi: [number, number, number] = [position[0], position[1], position[2]];
-
+	console.log('<Lens> Z Pos', lensPosi[2]);
 	let eflLabelPosi: [number, number, number] = [-3, 1.05 * radius * scaleY, position[2]];
 
 	let geo = genLensLathe(radius, R, -R, ct, scaleZ, scaleY);
@@ -37,10 +37,12 @@
 	function onEnter() {
 		backupcolor = color;
 		color = 'white';
+		opacity = 0.4;
 	}
 
 	function onLeave() {
 		color = backupcolor;
+		opacity = 1;
 	}
 </script>
 

@@ -2,7 +2,7 @@ import { Vector2, Vector3, BufferGeometry, BufferAttribute, LatheGeometry } from
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry'
 import { Lut } from 'three/examples/jsm/math/Lut'
 
-function calcSag(radius: number, R: number, k: number): number {
+export function calcSag(radius: number, R: number, k: number): number {
   const sag = (radius * radius / R) / (1 + Math.sqrt(1 - (1 + k) * Math.pow(radius, 2) / Math.pow(R, 2) ) );
   return sag;
 }
