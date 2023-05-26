@@ -93,7 +93,7 @@ export function findMinWaists(
       case 'lens': {
         //  return [znew, minwaist, roc, wz];
         p = Matrix2DxComplex(op.toMatrix2D(), p);
-        const [znew, waist, roc, radius] = beamProps(p, tsource, 1.0); // n=1.0 is index will
+        const [znew, waist, roc, ] = beamProps(p, tsource, 1.0); // n=1.0 is index will
         const zreal = ztrack - znew;
         if (Math.abs(roc) < 500 && zreal > 0 && zreal < 2020) {
           const w: WaistPosi = {
@@ -137,4 +137,59 @@ export function findWaistSizes(gp: GaussOp[], tsource: Source): number[] {
     zbase = ztrack;
   });
   return wSizes;
+}
+
+// generate lens items needed to plot
+export function generateLensData(
+  gp: GaussOp[], tsource: Source,
+  scaleY: number,
+  zScale: number[][]
+): [number[], number[][], string[], number[], number[][]] {
+
+
+  const zrj = tsource.rayleighDistance();
+  let p: Complex = { real: 0, imag: zrj };
+
+  let zbase = 0;
+  let ztrack = 0;
+
+  const radius: number[] = [];
+  const lensPosi: number[][] = [];
+  const lensColor: string[] = [];
+  const efls: number[] = [];
+  const eflLabelPosi: number[][] = [];
+
+  gp.forEach((op) => {
+    switch (op.type) {
+      case 'distance':
+        p.real += op.value;
+        ztrack = zbase + op.value;
+        break;
+      case 'lens': {
+        p = Matrix2DxComplex(op.toMatrix2D(), p);
+        const rtemp = waistSize(p, tsource, 1.0); // change 1 to material index if inside lens
+        radius.push(rtemp * 1.15);
+        lensPosi.push([0, 0, toGrid(ztrack, zScale)]);
+        lensColor.push(!op.color ? 'purple' : op.color);
+        efls.push(op.value);
+        eflLabelPosi.push([0, 1.2 * rtemp * scaleY, toGrid(ztrack, zScale)]);
+        break;
+      }
+    }
+    zbase = ztrack;
+  });
+  //console.log('<Tracer> Pos', lensPosi[2][2]);
+  return [radius, lensPosi, lensColor, efls, eflLabelPosi];
+}
+
+// returns a list of indices for a given type of element
+export function genTypeMap(gpin: GaussOp[], mapType: string) {
+  const gpmap: number[] = [];
+
+  gpin.forEach((element, index) => {
+    if (element.type === mapType) {
+      gpmap.push(index);
+    }
+  });
+  return gpmap;
 }

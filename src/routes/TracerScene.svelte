@@ -11,7 +11,8 @@
 		calcZend,
 		genLineSegs,
 		findMinWaists,
-		findWaistSizes
+		findWaistSizes,
+		generateLensData
 	} from '$lib/gtrace';
 
 	import {
@@ -21,7 +22,8 @@
 		points2ArrayX,
 		genGridLines2,
 		saveTextToFile,
-		converXYtoString
+		converXYtoString,
+		toWorld
 	} from '$lib/mathUtils';
 	import { type Complex, Matrix2DxComplex, waistSize, beamProps } from '$lib/gcomplex';
 	import Source from '$lib/source';
@@ -65,65 +67,12 @@
 
 	// **************************************
 	// calculate y axis parameters (waist size)
-	// Calculate start values for maxY and scales and ratios
-	let zrtemp = source.rayleighDistance();
 	let maxY = 5; // manually set max y for now, it will be updated later
 	let scaleY = gridHeight / maxY; // scale about center of plot 0 in Y axis
 
 	const yLabels: number[] = [];
 	for (let i = -gridHeight; i <= gridHeight; i += gridHeight / horizDivs) {
 		yLabels.push(i);
-	}
-
-	// generate lens items needed to plot
-	function generateLensData(
-		gp: GaussOp[],
-		waist: number,
-		wavelength: number,
-		zs: number[][]
-	): [number[], number[][], string[], number[], number[][]] {
-		let tsource = source.clone();
-		tsource.wavelength = wavelength;
-		tsource.waist = waist;
-
-		let zrj = tsource.rayleighDistance();
-		let p: Complex = { real: 0, imag: zrj };
-
-		let zbase = 0;
-		let ztrack = 0;
-
-		/*
-      radius={1.5}
-			position={[lensdata[0][index][0], lensdata[0][index][1], lensdata[0][index][2]]}
-			color={'purple'}
-			efl={100}
-    */
-		let radius: number[] = [];
-		let lensPosi: number[][] = [];
-		let lensColor: string[] = [];
-		let efls: number[] = [];
-		let eflLabelPosi: number[][] = [];
-
-		gp.forEach((op) => {
-			switch (op.type) {
-				case 'distance':
-					p.real += op.value;
-					ztrack = zbase + op.value;
-					break;
-				case 'lens':
-					p = Matrix2DxComplex(op.toMatrix2D(), p);
-					const rtemp = waistSize(p, tsource, 1.0); // change 1 to material index if inside lens
-					radius.push(rtemp * 1.15);
-					lensPosi.push([0, 0, toGrid(ztrack, zs)]);
-					lensColor.push(!op.color ? 'purple' : op.color);
-					efls.push(op.value);
-					eflLabelPosi.push([xoffset, 1.2 * rtemp * scaleY, toGrid(ztrack, zs)]);
-					break;
-			}
-			zbase = ztrack;
-		});
-		//console.log('<Tracer> Pos', lensPosi[2][2]);
-		return [radius, lensPosi, lensColor, efls, eflLabelPosi];
 	}
 
 	// line data to plot beam trajectory + some data for final waist marker
@@ -133,10 +82,7 @@
 	$: wps = findMinWaists(gpin, source, scaleY, zScale);
 
 	// generate lens for plot
-	$: lenses = generateLensData(gpin, waistvalue, wavelvalue, [
-		[zstart, calcZend(gpin)],
-		[-gridWidth, gridWidth]
-	]);
+	$: lenses = generateLensData(gpin, source, scaleY, zScale);
 
 	// generate grid lines
 	$: gridLines = genGridLines2(xoffset, gridWidth, horizDivs, gridHeight, vertDivs);
@@ -144,19 +90,7 @@
 	// location of waist on grid in gridunits
 	$: zWaistGridUnits = toGrid(0, zScale);
 
-	const showefls = true;
 	const showwaists = true;
-
-	function genTypeMap(gp: GaussOp[], mapType: string) {
-		const gpmap: number[] = [];
-
-		gpin.forEach((element, index) => {
-			if (element.type === mapType) {
-				gpmap.push(index);
-			}
-		});
-		return gpmap;
-	}
 
 	let lineWidth = 0.005;
 
@@ -168,8 +102,38 @@
 		lineWidth = 0.005;
 	}
 
-	function onclickLine() {
-		xoffset += 5;
+	let gpindex = 0; // if user presses number key change the gp index
+	function findInex(z: number): number {
+		let index = -1;
+		let A = 0;
+		for (let i = 0; i < gpin.length; i++) {
+			if (gpin[i].type === 'distance') {
+				const B = A + gpin[i].value;
+				if (z > A && z < B) {
+					index = i;
+					//console.log(A, B, i);
+					break;
+				} else {
+					//console.log(A, B, i);
+					A += gpin[i].value;
+				}
+			} else {
+				//console.log('not distance', i);
+			}
+		}
+		return index;
+	}
+
+	function onclickLine(e: MouseEvent) {
+		const keys = Object.keys(e);
+		if (keys.includes('pointOnLine')) {
+			const point = e['pointOnLine' as keyof MouseEvent] as unknown as Vector3;
+			console.log('point: ', point.z);
+			const trackz = toWorld(point.z, zScale);
+			console.log('🚀 ~ trackz:', trackz);
+			gpindex = findInex(trackz);
+			console.log('🚀 ~ gpindex:', gpindex);
+		}
 	}
 
 	function upDateCanvas() {
@@ -187,34 +151,37 @@
 	}
 
 	/** @param {KeyboardEvent} e */
-	let gpindex = 0; // if user presses number key change the gp index
+
 	function onKeyDown(e: KeyboardEvent) {
+		console.log(e.key);
 		if (/[0,2,3,5,7]/.test(e.key)) {
 			gpindex = parseInt(e.key);
 		}
-		switch (e.key) {
-			case 's':
-				xoffset += 5;
-				break;
-			case 'w':
-				xoffset -= 5;
-				break;
-			case 'r':
-				xoffset = 0;
-				break;
+		if (gpindex >= 0 && gpindex < gpin.length) {
+			switch (e.key) {
+				case 'a':
+					gpin[gpindex].value -= 10;
+					upDateCanvas();
+					break;
 
-			case 'a':
-				gpin[gpindex].value -= 10;
-				upDateCanvas();
-				break;
+				case 'ArrowLeft':
+					gpin[gpindex].value -= 10;
+					upDateCanvas();
+					break;
 
-			case 'd':
-				gpin[gpindex].value += 10;
-				upDateCanvas();
-				break;
+				case 'd':
+					gpin[gpindex].value += 10;
+					upDateCanvas();
+					break;
 
-			default:
-				break;
+				case 'ArrowRight':
+					gpin[gpindex].value += 10;
+					upDateCanvas();
+					break;
+
+				default:
+					break;
+			}
 		}
 	}
 </script>
@@ -232,6 +199,7 @@
 		material={new LineMaterial({ color: 0x0000ff, linewidth: lineWidth })}
 		on:pointerenter={onLineEnter}
 		on:pointerleave={onLineLeave}
+		on:click={onclickLine}
 	/>
 	<T
 		is={Line2}
