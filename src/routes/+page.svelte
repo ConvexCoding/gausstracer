@@ -9,7 +9,7 @@
 	// define Gaussian beam operations
 	const sf = 1;
 	//f2 = 266.6666666666667
-	// f1 = 133.3333333333333
+	// f1 = 133.3333333333333m
 	let gp: GaussOp[] = [];
 	gp.push(new GaussOp('distance', 50 / sf)); // index 0
 	gp.push(new GaussOp('lens', 100 / sf, 1, 'green')); // index 1

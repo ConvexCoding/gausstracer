@@ -27,11 +27,17 @@
 		opacity = 0.25;
 	}
 
-	let lensPosi: [number, number, number] = [position[0], position[1], position[2]];
-	console.log('<Lens> Z Pos', lensPosi[2]);
-	let eflLabelPosi: [number, number, number] = [-3, 1.05 * radius * scaleY, position[2]];
+	$: lensPosi = [position[0], position[1], position[2]];
+	//console.log('<Lens> Z Pos', lensPosi[2]);
 
-	let geo = genLensLathe(radius, R, -R, ct, scaleZ, scaleY);
+	function getLabelPosition(radius: number, scaleY: number, position: [number, number, number]) {
+		let posi: [number, number, number] = [-3, 1.05 * radius * scaleY, position[2]];
+		return posi;
+	}
+
+	$: eflLabelPosi = getLabelPosition(radius, scaleY, position);
+
+	$: geo = genLensLathe(radius, R, -R, ct, scaleZ, scaleY);
 	let backupcolor = color;
 
 	function onEnter() {
@@ -48,7 +54,7 @@
 
 <T.Mesh
 	geometry={geo}
-	position={lensPosi}
+	position={[lensPosi[0], lensPosi[1], lensPosi[2]]}
 	rotation={[Math.PI / 2, 0, 0]}
 	on:pointerenter={onEnter}
 	on:pointerleave={onLeave}

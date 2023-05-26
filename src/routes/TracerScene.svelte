@@ -7,6 +7,14 @@
 	import LightsCamera from './LightsCamera.svelte';
 
 	import {
+		type WaistPosi,
+		calcZend,
+		genLineSegs,
+		findMinWaists,
+		findWaistSizes
+	} from '$lib/gtrace';
+
+	import {
 		genLineSegment,
 		setAxisLimits,
 		toGrid,
@@ -22,159 +30,49 @@
 
 	export let gpin: GaussOp[] = [];
 	export let source: Source = new Source(1.07, 1, 0, 3);
+	const titletext = 'Gaussian Beam Tracer';
 
 	interactivity();
-	const n = 1;
-	let titletext = 'Gaussian Beam Tracer';
 
-	const zstart = 0;
-	const zinc = 1;
-
-	let zend = calcZend(gpin);
-
-	function calcZend(gp: GaussOp[]) {
-		let zend = 0;
-		gp.forEach((op) => {
-			if (op.type == 'distance') zend += op.value;
-		});
-		return zend;
-	}
-
-	// define slider values for input waist, wavelength, lens focal length, and lens position
-	let waistvalue = source.waist;
-	let wavelvalue = source.wavelength;
-
-	// displayed chart in pixels
+	// **************************************
+	// set canvas parameters and initial grid values
 	const gridWidth = 250; // total grid width = 2 * gridWidth
 	const horizDivs = 5;
 	const gridHeight = 75; // total grid height = 2 * gridHeight
 	const vertDivs = 5;
+	let xoffset = -2; // use this offset to make sure labels are visible
 
-	// set up labels for horizontal axis
-	const horizlabels: number[] = [];
-	for (let i = 0; i <= 2 * gridWidth; i += gridWidth / vertDivs) {
-		horizlabels.push(i);
-	}
+	// define slider values for input waist, wavelength, lens focal length, and lens position
+	// maybe for use in future
+	let waistvalue = source.waist;
+	let wavelvalue = source.wavelength;
 
-	function genHorizLabels() {}
-
-	const verticallabels: number[] = [];
-	for (let i = -gridHeight; i <= gridHeight; i += gridHeight / horizDivs) {
-		verticallabels.push(i);
-	}
-
+	// **************************************
+	// calculate z or optical axis parameters
+	const zstart = 0; // assume model begins at z = 0
+	let zend = calcZend(gpin); // find end of model
+	const zinc = 1; // plot beam path every 1 mm
+	let scaleZ = (2 * gridWidth) / (zend - zstart); // scale about -gridWith
 	$: zScale = [
 		[zstart, calcZend(gpin)],
 		[-gridWidth, gridWidth]
-	];
+	]; // zScale is used to convert z to grid coordinates
 
+	const zLabels: number[] = []; // setup z axis labels scheme
+	for (let i = 0; i <= 2 * gridWidth; i += (2 * gridWidth) / vertDivs) {
+		zLabels.push(i);
+	}
+
+	// **************************************
+	// calculate y axis parameters (waist size)
 	// Calculate start values for maxY and scales and ratios
 	let zrtemp = source.rayleighDistance();
-	let maxY = source.waist * Math.sqrt(1 + (zend / zrtemp) * (zend / zrtemp)); // max waist size needed for scale chart
-	maxY = setAxisLimits(0, maxY, zinc)[1]; // round up to nearest logical chart scale
-	maxY = 5;
-	// set scale constants for w and z
-	let scaleZ = (2 * gridWidth) / (zend - zstart); // scale about -gridWith
-	const scaleY = gridHeight / maxY; // scale about center of plot 0 in Y axis
+	let maxY = 5; // manually set max y for now, it will be updated later
+	let scaleY = gridHeight / maxY; // scale about center of plot 0 in Y axis
 
-	let xoffset = -2;
-
-	interface WaistPosi {
-		waist: number;
-		yscaled: number;
-		zscaled: number;
-	}
-
-	// main function for computing lens segs
-	function genLineSegs(
-		gp: GaussOp[],
-		waist: number,
-		wavelength: number
-	): [Float32Array, Float32Array] {
-		let tsource = source.clone();
-		tsource.wavelength = wavelength;
-		tsource.waist = waist;
-
-		let zrj = tsource.rayleighDistance();
-		let p: Complex = { real: 0, imag: zrj };
-
-		const zsave: number[] = [];
-		const wsave: number[] = [];
-		const z: number[] = [];
-		const w: number[] = [];
-
-		let zbase = 0; // local beam path used to find waist
-		let ztrack = 0; // this tracks the beam path in world z
-		let offset = 0;
-		gp.forEach((op) => {
-			switch (op.type) {
-				case 'distance':
-					for (let d = 0; d <= op.value; d += zinc) {
-						p.real = d + offset;
-						ztrack = zbase + d;
-						let wsize = waistSize(p, tsource, n);
-						zsave.push(ztrack);
-						wsave.push(wsize);
-						z.push(toGrid(ztrack, zScale));
-						w.push(wsize * scaleY);
-					}
-					offset = p.real; // do this in case the next surface is distance and not a lens
-					break;
-				case 'lens':
-					p = Matrix2DxComplex(op.toMatrix2D(), p);
-					const props = beamProps(p, tsource, n);
-					//[znew, minwaist, roc, wz];
-					offset = props[0];
-					break;
-			}
-			zbase = ztrack;
-		});
-
-		//saveTextToFile(converXYtoString(zsave, wsave), 'z-w.txt');
-		//const temp = Math.max(...w);
-		//maxY = setAxisLimits(0, temp)[1];
-		const [plussegs, negsegs] = points2ArrayX(xoffset, w, z);
-		return [plussegs, negsegs];
-	}
-
-	// main function for computing lens segs
-	function findMinWaists(gp: GaussOp[], waist: number, wavelength: number): WaistPosi[] {
-		let tsource = source.clone();
-		tsource.wavelength = wavelength;
-		tsource.waist = waist;
-
-		let zrj = tsource.rayleighDistance();
-		let p: Complex = { real: 0, imag: zrj };
-
-		let zbase = 0;
-		let ztrack = 0;
-
-		let wps: WaistPosi[] = [];
-
-		gp.forEach((op) => {
-			switch (op.type) {
-				case 'distance':
-					p.real += op.value;
-					ztrack = zbase + op.value;
-					break;
-				case 'lens':
-					//  return [znew, minwaist, roc, wz];
-					p = Matrix2DxComplex(op.toMatrix2D(), p);
-					const [znew, waist, roc, radius] = beamProps(p, tsource, n);
-					const zreal = ztrack - znew;
-					if (Math.abs(roc) < 500 && zreal > 0 && zreal < 2020) {
-						let w: WaistPosi = {
-							waist: waist,
-							yscaled: waist * scaleY,
-							zscaled: toGrid(zreal, zScale)
-						};
-						wps.push(w);
-					}
-					break;
-			}
-			zbase = ztrack;
-		});
-		return wps;
+	const yLabels: number[] = [];
+	for (let i = -gridHeight; i <= gridHeight; i += gridHeight / horizDivs) {
+		yLabels.push(i);
 	}
 
 	// generate lens items needed to plot
@@ -214,7 +112,7 @@
 					break;
 				case 'lens':
 					p = Matrix2DxComplex(op.toMatrix2D(), p);
-					const rtemp = waistSize(p, tsource, n);
+					const rtemp = waistSize(p, tsource, 1.0); // change 1 to material index if inside lens
 					radius.push(rtemp * 1.15);
 					lensPosi.push([0, 0, toGrid(ztrack, zs)]);
 					lensColor.push(!op.color ? 'purple' : op.color);
@@ -224,22 +122,21 @@
 			}
 			zbase = ztrack;
 		});
-		console.log('<Tracer> Pos', lensPosi[2][2]);
+		//console.log('<Tracer> Pos', lensPosi[2][2]);
 		return [radius, lensPosi, lensColor, efls, eflLabelPosi];
 	}
 
 	// line data to plot beam trajectory + some data for final waist marker
-	$: linedata = genLineSegs(gpin, waistvalue, wavelvalue);
+	$: linedata = genLineSegs(gpin, source, scaleY, zScale, zinc);
 
 	// find min waists for labeling
-	$: wps = findMinWaists(gpin, waistvalue, wavelvalue);
+	$: wps = findMinWaists(gpin, source, scaleY, zScale);
 
 	// generate lens for plot
 	$: lenses = generateLensData(gpin, waistvalue, wavelvalue, [
 		[zstart, calcZend(gpin)],
 		[-gridWidth, gridWidth]
 	]);
-	console.log(lenses);
 
 	// generate grid lines
 	$: gridLines = genGridLines2(xoffset, gridWidth, horizDivs, gridHeight, vertDivs);
@@ -275,8 +172,22 @@
 		xoffset += 5;
 	}
 
+	function upDateCanvas() {
+		zend = calcZend(gpin);
+		scaleZ = (2 * gridWidth) / (zend - zstart);
+		zScale = zScale = [
+			[zstart, calcZend(gpin)],
+			[-gridWidth, gridWidth]
+		];
+		const tempY = Math.max(...findWaistSizes(gpin, source));
+		const yLimit = setAxisLimits(0, tempY)[1];
+		//console.log(tempY, yLimit);
+		maxY = yLimit;
+		scaleY = gridHeight / maxY;
+	}
+
 	/** @param {KeyboardEvent} e */
-	let gpindex = 0;
+	let gpindex = 0; // if user presses number key change the gp index
 	function onKeyDown(e: KeyboardEvent) {
 		if (/[0,2,3,5,7]/.test(e.key)) {
 			gpindex = parseInt(e.key);
@@ -294,27 +205,12 @@
 
 			case 'a':
 				gpin[gpindex].value -= 10;
-				if (gpin[gpindex].value < 0) gpin[gpindex].value = 0;
-				zend = calcZend(gpin);
-				scaleZ = (2 * gridWidth) / (zend - zstart);
-				zScale = zScale = [
-					[zstart, calcZend(gpin)],
-					[-gridWidth, gridWidth]
-				];
-				lenses = generateLensData(gpin, waistvalue, wavelvalue, zScale);
-				//console.log('<Tracer> Z2 Pos', lenses[1][2][2]);
+				upDateCanvas();
 				break;
 
 			case 'd':
 				gpin[gpindex].value += 10;
-				zend = calcZend(gpin);
-				scaleZ = (2 * gridWidth) / (zend - zstart);
-				zScale = zScale = [
-					[zstart, calcZend(gpin)],
-					[-gridWidth, gridWidth]
-				];
-				lenses = generateLensData(gpin, waistvalue, wavelvalue, zScale);
-				//console.log('<Tracer> Z2 Pos', lenses[1][2][2]);
+				upDateCanvas();
 				break;
 
 			default:
@@ -326,7 +222,7 @@
 <svelte:window on:keydown|preventDefault={onKeyDown} />
 
 <!-- Add Camera and Lights-->
-<LightsCamera scale={0.4} />
+<LightsCamera scale={0.6} />
 
 <!-- plus & negative waist profile lines -->
 <T.Mesh>
@@ -448,7 +344,7 @@
 	</T.Mesh>
 
 	<!-- horizontal axis labels -->
-	{#each horizlabels as hl}
+	{#each zLabels as hl}
 		<T.Mesh position={[xoffset, -gridHeight, hl - 250]} rotation.y={-Math.PI / 2}>
 			<Text
 				text={(hl / scaleZ).toFixed(0)}
@@ -460,7 +356,7 @@
 		</T.Mesh>
 	{/each}
 
-	{#each verticallabels as vl}
+	{#each yLabels as vl}
 		<T.Mesh position={[xoffset, vl, -gridWidth - 5]} rotation.y={-Math.PI / 2}>
 			<Text
 				text={(vl / scaleY).toFixed(2)}

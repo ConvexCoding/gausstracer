@@ -4,26 +4,29 @@ export default class Source {
   wavelength: number  // wavelength of source
   waist: number  // waist of source
   waistposition: number  // waist location relative to source
+  index: number  // index of refraction of source
   msq: number  // m squared factor of source
 
   constructor(
     wavelength: number | string,
     waist: number | string = 0,
     waistposition: number | string = 0,
+    index: number | string = 1.0,
     msq: number | string = 1.0,
   ) {
     this.wavelength = ensureNumber(wavelength)
     this.waist = ensureNumber(waist)
     this.waistposition = ensureNumber(waistposition)
+    this.index = ensureNumber(index)
     this.msq = ensureNumber(msq)
   }
 
   public rayleighDistance(): number {
-     return (Math.PI * this.waist * this.waist) / ((this.wavelength * this.msq) / 1000);
+     return (Math.PI * this.waist * this.waist * this.index) / ((this.wavelength * this.msq) / 1000);
   }
 
   clone() {
-    return new Source(this.wavelength, this.waist, this.waistposition, this.msq)
+    return new Source(this.wavelength, this.waist, this.waistposition, this.index, this.msq)
   }
 }
 
