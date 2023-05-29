@@ -135,11 +135,19 @@
 			//console.log('point: ', point.z);
 			const trackz = toWorld(point.z, zScale);
 			//console.log('🚀 ~ trackz:', trackz);
-			gpDistIndex = findIndex(trackz);
+			const newIndex = findIndex(trackz);
+			if (newIndex === gpDistIndex) {
+				gpDistIndex = -1;
+				gpLensIndex = -1;
+			} else {
+				gpDistIndex = newIndex;
+				gpLensIndex = -1;
+			}
 			console.log('🚀 ~ gpDistIndex:', gpDistIndex);
 		}
 	}
 
+	let gpLensIndex = -1;
 	function onclickLens(e: MouseEvent) {
 		if (Object.keys(e).includes('object')) {
 			const objInfo = e['object' as keyof MouseEvent] as unknown as Object3D;
@@ -148,8 +156,14 @@
 				console.log(name);
 				if (name.includes('Lens')) {
 					const index = parseInt(name.slice(-1));
-					console.log('final index', index, typeof index);
-					gpin[index].value = 250;
+					if (index === gpLensIndex) {
+						gpLensIndex = -1;
+						gpDistIndex = -1;
+					} else {
+						gpLensIndex = index;
+						gpDistIndex = -1;
+					}
+					//console.log('final index', index, typeof index);
 				}
 			}
 		}
@@ -171,7 +185,7 @@
 
 	/** @param {KeyboardEvent} e */
 	function onKeyDown(e: KeyboardEvent) {
-		if (gpDistIndex === -1) {
+		if (gpDistIndex === -1 && gpLensIndex === -1) {
 			return;
 		}
 		if (gpDistIndex >= 0 && gpDistIndex < gpin.length) {
@@ -193,6 +207,32 @@
 
 				case 'ArrowRight':
 					gpin[gpDistIndex].value += 10;
+					upDateCanvas();
+					break;
+
+				default:
+					break;
+			}
+		}
+		if (gpLensIndex >= 0 && gpLensIndex < gpin.length) {
+			switch (e.key) {
+				case 'a':
+					gpin[gpLensIndex].value -= 5;
+					upDateCanvas();
+					break;
+
+				case 'ArrowLeft':
+					gpin[gpLensIndex].value -= 5;
+					upDateCanvas();
+					break;
+
+				case 'd':
+					gpin[gpLensIndex].value += 5;
+					upDateCanvas();
+					break;
+
+				case 'ArrowRight':
+					gpin[gpLensIndex].value += 5;
 					upDateCanvas();
 					break;
 
