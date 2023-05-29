@@ -19,7 +19,6 @@
 		genLineSegment,
 		setAxisLimits,
 		toGrid,
-		points2ArrayX,
 		genGridLines2,
 		saveTextToFile,
 		converXYtoString,
@@ -102,7 +101,7 @@
 		lineWidth = 0.005;
 	}
 
-	let gpindex = 0; // if user presses number key change the gp index
+	let gpDistIndex = -1; // if user presses number key change the gp index
 	function findInex(z: number): number {
 		let index = -1;
 		let A = 0;
@@ -128,12 +127,16 @@
 		const keys = Object.keys(e);
 		if (keys.includes('pointOnLine')) {
 			const point = e['pointOnLine' as keyof MouseEvent] as unknown as Vector3;
-			console.log('point: ', point.z);
+			//console.log('point: ', point.z);
 			const trackz = toWorld(point.z, zScale);
-			console.log('🚀 ~ trackz:', trackz);
-			gpindex = findInex(trackz);
-			console.log('🚀 ~ gpindex:', gpindex);
+			//console.log('🚀 ~ trackz:', trackz);
+			gpDistIndex = findInex(trackz);
+			console.log('🚀 ~ gpDistIndex:', gpDistIndex);
 		}
+	}
+
+	function onclickLens(e: MouseEvent) {
+		console.log(' lens click');
 	}
 
 	function upDateCanvas() {
@@ -151,31 +154,29 @@
 	}
 
 	/** @param {KeyboardEvent} e */
-
 	function onKeyDown(e: KeyboardEvent) {
-		console.log(e.key);
-		if (/[0,2,3,5,7]/.test(e.key)) {
-			gpindex = parseInt(e.key);
+		if (gpDistIndex === -1) {
+			return;
 		}
-		if (gpindex >= 0 && gpindex < gpin.length) {
+		if (gpDistIndex >= 0 && gpDistIndex < gpin.length) {
 			switch (e.key) {
 				case 'a':
-					gpin[gpindex].value -= 10;
+					gpin[gpDistIndex].value -= 10;
 					upDateCanvas();
 					break;
 
 				case 'ArrowLeft':
-					gpin[gpindex].value -= 10;
+					gpin[gpDistIndex].value -= 10;
 					upDateCanvas();
 					break;
 
 				case 'd':
-					gpin[gpindex].value += 10;
+					gpin[gpDistIndex].value += 10;
 					upDateCanvas();
 					break;
 
 				case 'ArrowRight':
-					gpin[gpindex].value += 10;
+					gpin[gpDistIndex].value += 10;
 					upDateCanvas();
 					break;
 
@@ -183,6 +184,10 @@
 					break;
 			}
 		}
+	}
+
+	function onWheel(e: MouseEvent) {
+		console.log('click', e);
 	}
 </script>
 
@@ -207,6 +212,7 @@
 		material={new LineMaterial({ color: 0x0000ff, linewidth: lineWidth })}
 		on:pointerenter={onLineEnter}
 		on:pointerleave={onLineLeave}
+		on:click={onclickLine}
 	/>
 </T.Mesh>
 

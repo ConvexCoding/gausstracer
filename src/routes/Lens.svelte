@@ -13,10 +13,10 @@
 	export let efl: number = 100;
 	export let showefls: boolean = true;
 
-	let R = radius * 1.4;
+	let R = radius * 5;
 	let opacity = 1;
 	let sag1 = calcSag(radius, R, 0);
-	let ct = 2 * sag1 + 5 * scaleZ;
+	let ct = 2 * sag1 + 5;
 	// scaleZ = real / pixels
 	// ctpixels = 10 pixels
 	// ctreal = 10 * scaleZ
