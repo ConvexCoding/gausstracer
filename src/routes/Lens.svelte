@@ -4,15 +4,16 @@
 	import { DoubleSide, LatheGeometry } from 'three';
 	import { Editable } from '@threlte/theatre';
 	import { genLensLathe, calcSag } from '$lib/mathUtils';
+	import GaussOp from '$lib/gaussop';
 
 	export let radius: number = 1;
 	export let scaleZ: number = 1;
 	export let scaleY: number = 1;
 	export let position: [number, number, number];
-	export let color: string = 'black';
-	export let efl: number = 100;
+	export let gop: GaussOp = new GaussOp('lens', 100, 1, 'purple');
 	export let showefls: boolean = true;
-
+	let efl = gop.value;
+	let color = gop.color;
 	let R = radius * 5;
 	let opacity = 1;
 	let sag1 = calcSag(radius, R, 0);

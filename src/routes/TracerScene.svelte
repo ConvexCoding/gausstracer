@@ -102,7 +102,7 @@
 	}
 
 	let gpDistIndex = -1; // if user presses number key change the gp index
-	function findInex(z: number): number {
+	function findIndex(z: number): number {
 		let index = -1;
 		let A = 0;
 		for (let i = 0; i < gpin.length; i++) {
@@ -130,7 +130,7 @@
 			//console.log('point: ', point.z);
 			const trackz = toWorld(point.z, zScale);
 			//console.log('🚀 ~ trackz:', trackz);
-			gpDistIndex = findInex(trackz);
+			gpDistIndex = findIndex(trackz);
 			console.log('🚀 ~ gpDistIndex:', gpDistIndex);
 		}
 	}
@@ -224,8 +224,7 @@
 			{scaleY}
 			{scaleZ}
 			position={[lenses[1][index][0], lenses[1][index][1], lenses[1][index][2]]}
-			color={lenses[2][index]}
-			efl={lenses[3][index]}
+			gop={lenses[2][index]}
 		/>
 	{/each}
 {/if}
