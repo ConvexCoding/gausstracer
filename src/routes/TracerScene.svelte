@@ -1,7 +1,14 @@
 <script lang="ts">
 	import { Text, interactivity } from '@threlte/extras';
 	import { T, forwardEventHandlers, useThrelte } from '@threlte/core';
-	import { BufferGeometry, DoubleSide, LatheGeometry, LineDashedMaterial, Vector3 } from 'three';
+	import {
+		BufferGeometry,
+		DoubleSide,
+		LatheGeometry,
+		LineDashedMaterial,
+		Object3D,
+		Vector3
+	} from 'three';
 	import { Line2 } from 'three/examples/jsm/lines/Line2';
 	import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial';
 	import LightsCamera from './LightsCamera.svelte';
@@ -12,7 +19,8 @@
 		genLineSegs,
 		findMinWaists,
 		findWaistSizes,
-		generateLensData
+		generateLensData,
+		genTypeMap
 	} from '$lib/gtrace';
 
 	import {
@@ -22,12 +30,12 @@
 		genGridLines2,
 		saveTextToFile,
 		converXYtoString,
-		toWorld
+		toWorld,
+		genLensLathe
 	} from '$lib/mathUtils';
 	import { type Complex, Matrix2DxComplex, waistSize, beamProps } from '$lib/gcomplex';
 	import Source from '$lib/source';
 	import type GaussOp from '$lib/gaussop';
-	import Lens from './Lens.svelte';
 
 	export let gpin: GaussOp[] = [];
 	export let source: Source = new Source(1.07, 1, 0, 3);
@@ -79,9 +87,6 @@
 
 	// find min waists for labeling
 	$: wps = findMinWaists(gpin, source, scaleY, zScale);
-
-	// generate lens for plot
-	$: lenses = generateLensData(gpin, source, scaleY, zScale);
 
 	// generate grid lines
 	$: gridLines = genGridLines2(xoffset, gridWidth, horizDivs, gridHeight, vertDivs);
@@ -136,7 +141,18 @@
 	}
 
 	function onclickLens(e: MouseEvent) {
-		console.log(' lens click');
+		if (Object.keys(e).includes('object')) {
+			const objInfo = e['object' as keyof MouseEvent] as unknown as Object3D;
+			if (Object.keys(objInfo).includes('name')) {
+				const name = objInfo['name' as keyof Object3D] as unknown as string;
+				console.log(name);
+				if (name.includes('Lens')) {
+					const index = parseInt(name.slice(-1));
+					console.log('final index', index, typeof index);
+					gpin[index].value = 250;
+				}
+			}
+		}
 	}
 
 	function upDateCanvas() {
@@ -186,9 +202,15 @@
 		}
 	}
 
-	function onWheel(e: MouseEvent) {
-		console.log('click', e);
-	}
+	// generate lens for plot
+	$: [radius, lensPosi, gop, lensIndex, eflLabelPosi] = generateLensData(
+		gpin,
+		source,
+		scaleY,
+		zScale
+	);
+	const positiveLens = genLensLathe(1, 2, -2, 2, scaleZ, scaleY);
+	const negativeLens = genLensLathe(1, -1, 1, 1, scaleZ, scaleY);
 </script>
 
 <svelte:window on:keydown|preventDefault={onKeyDown} />
@@ -216,9 +238,38 @@
 	/>
 </T.Mesh>
 
-<!-- lenses  -->
-{#if lenses.length > 0}
-	{#each { length: lenses[0].length } as _, index}
+<!-- lenses  	[radius, lensPosi, gop, eflLabelPosi] -->
+{#if radius.length > 0}
+	{#each { length: radius.length } as _, index}
+		<T.Mesh
+			geometry={gop[index].value > 0 ? positiveLens : negativeLens}
+			name={'Lens' + lensIndex[index].toString()}
+			position={lensPosi[index]}
+			rotation={[Math.PI / 2, 0, 0]}
+			scale={radius[index]}
+			on:click={onclickLens}
+			let:ref
+		>
+			<T.MeshPhongMaterial
+				color={gop[index].color}
+				opacity={1.0}
+				transparent
+				side={DoubleSide}
+				shininess={100}
+			/>
+		</T.Mesh>
+
+		<T.Mesh position={eflLabelPosi[index]} rotation.y={-Math.PI / 2}>
+			<Text
+				text={'f' + lensIndex[index].toString() + ' = ' + gop[index].value.toFixed(0) + ' mm'}
+				color={0x000000}
+				fontSize={8}
+				anchorX={'center'}
+				anchorY={'bottom'}
+			/>
+		</T.Mesh>
+
+		<!--
 		<Lens
 			radius={lenses[0][index]}
 			{scaleY}
@@ -226,6 +277,7 @@
 			position={[lenses[1][index][0], lenses[1][index][1], lenses[1][index][2]]}
 			gop={lenses[2][index]}
 		/>
+    -->
 	{/each}
 {/if}
 

@@ -12,7 +12,7 @@
 	// f1 = 133.3333333333333m
 	let gp: GaussOp[] = [];
 	gp.push(new GaussOp('distance', 50 / sf)); // index 0
-	gp.push(new GaussOp('lens', 100 / sf, 1, 'green')); // index 1
+	gp.push(new GaussOp('lens', -100 / sf, 1, 'green')); // index 1
 	//
 	gp.push(new GaussOp('distance', 100 / sf)); // index 2
 	gp.push(new GaussOp('distance', 200 / sf)); // index 3

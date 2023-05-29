@@ -144,7 +144,7 @@ export function generateLensData(
   gp: GaussOp[], tsource: Source,
   scaleY: number,
   zScale: number[][]
-): [number[], number[][], GaussOp[], number[][]] {
+): [number[], [number, number, number][], GaussOp[], number[], [number, number, number][]] {
 
 
   const zrj = tsource.rayleighDistance();
@@ -154,11 +154,12 @@ export function generateLensData(
   let ztrack = 0;
 
   const radius: number[] = [];
-  const lensPosi: number[][] = [];
+  const lensPosi: [number, number, number][] = [];
   const gop: GaussOp[] = [];
-  const eflLabelPosi: number[][] = [];
+  const gopIndex: number[] = [];
+  const eflLabelPosi: [number, number, number][] = [];
 
-  gp.forEach((op) => {
+  gp.forEach((op, index) => {
     switch (op.type) {
       case 'distance':
         p.real += op.value;
@@ -168,15 +169,17 @@ export function generateLensData(
         p = Matrix2DxComplex(op.toMatrix2D(), p);
         const rtemp = waistSize(p, tsource, 1.0); // change 1 to material index if inside lens
         radius.push(rtemp * 1.15);
-        lensPosi.push([0, 0, toGrid(ztrack, zScale)]);
+        const posi: [number, number, number] = [0, 0, toGrid(ztrack, zScale)];
+        lensPosi.push(posi);
         gop.push(op.clone());
+        gopIndex.push(index);
         eflLabelPosi.push([0, 1.2 * rtemp * scaleY, toGrid(ztrack, zScale)]);
         break;
       }
     }
     zbase = ztrack;
   });
-    return [radius, lensPosi, gop, eflLabelPosi];
+  return [radius, lensPosi, gop, gopIndex, eflLabelPosi];
 }
 
 // returns a list of indices for a given type of element
