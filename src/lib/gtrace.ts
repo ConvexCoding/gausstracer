@@ -1,7 +1,8 @@
 import { type Complex, Matrix2DxComplex, waistSize, beamProps } from '$lib/gcomplex';
 import type Source from '$lib/source';
 import type GaussOp from '$lib/gaussop';
-import { points2ArrayX, toGrid } from '$lib/mathUtils';
+import { genLensLathe2, points2ArrayX, toGrid } from '$lib/mathUtils';
+import type { LatheGeometry } from 'three';
 
 	// define this interface - TODO: figure out how to do witout
 export interface WaistPosi {
@@ -142,9 +143,10 @@ export function findWaistSizes(gp: GaussOp[], tsource: Source): number[] {
 // generate lens items needed to plot
 export function generateLensData(
   gp: GaussOp[], tsource: Source,
+  scaleZ: number,
   scaleY: number,
   zScale: number[][]
-): [number[], [number, number, number][], GaussOp[], number[], [number, number, number][]] {
+): [number[], [number, number, number][], GaussOp[], number[], [number, number, number][], LatheGeometry[]] {
 
 
   const zrj = tsource.rayleighDistance();
@@ -158,6 +160,7 @@ export function generateLensData(
   const gop: GaussOp[] = [];
   const gopIndex: number[] = [];
   const eflLabelPosi: [number, number, number][] = [];
+  const geos: LatheGeometry[] = [];
 
   gp.forEach((op, index) => {
     switch (op.type) {
@@ -174,12 +177,13 @@ export function generateLensData(
         gop.push(op.clone());
         gopIndex.push(index);
         eflLabelPosi.push([0, 1.2 * rtemp * scaleY, toGrid(ztrack, zScale)]);
+        geos.push(genLensLathe2(rtemp * 1.2, op.value, scaleZ, scaleY));
         break;
       }
     }
     zbase = ztrack;
   });
-  return [radius, lensPosi, gop, gopIndex, eflLabelPosi];
+  return [radius, lensPosi, gop, gopIndex, eflLabelPosi, geos];
 }
 
 // returns a list of indices for a given type of element

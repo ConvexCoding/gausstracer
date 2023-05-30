@@ -27,7 +27,9 @@
 
 	export let gpin: GaussOp[] = [];
 	export let source: Source = new Source(1.07, 1, 0, 3);
+
 	const titletext = 'Gaussian Beam Tracer';
+	const showwaists = true;
 
 	interactivity();
 
@@ -38,11 +40,6 @@
 	const gridHeight = 75; // total grid height = 2 * gridHeight
 	const vertDivs = 5;
 	let xoffset = -2; // use this offset to make sure labels are visible
-
-	// define slider values for input waist, wavelength, lens focal length, and lens position
-	// maybe for use in future
-	let waistvalue = source.waist;
-	let wavelvalue = source.wavelength;
 
 	// **************************************
 	// calculate z or optical axis parameters
@@ -69,8 +66,6 @@
 	for (let i = -gridHeight; i <= gridHeight; i += gridHeight / horizDivs) {
 		yLabels.push(i);
 	}
-
-	const showwaists = true;
 
 	let lineWidth = 0.005;
 	let lineColor = 0x0000ff;
@@ -233,14 +228,13 @@
 	$: zWaistGridUnits = toGrid(0, zScale);
 
 	// generate lens for plot
-	$: [radius, lensPosi, gop, lensIndex, eflLabelPosi] = generateLensData(
+	$: [radius, lensPosi, gop, lensIndex, eflLabelPosi, geos] = generateLensData(
 		gpin,
 		source,
+		scaleZ,
 		scaleY,
 		zScale
 	);
-	const positiveLens = genLensLathe(1, 2, -2, 2, scaleZ, scaleY);
-	const negativeLens = genLensLathe(1, -1, 1, 1, scaleZ, scaleY);
 </script>
 
 <svelte:window on:keydown|preventDefault={onKeyDown} />
@@ -268,15 +262,14 @@
 	/>
 </T.Mesh>
 
-<!-- lenses  	[radius, lensPosi, gop, eflLabelPosi] -->
+<!-- lenses  	[radius, lensPosi, gop, eflLabelPosi, geos] -->
 {#if radius.length > 0}
 	{#each { length: radius.length } as _, index}
 		<T.Mesh
-			geometry={gop[index].value > 0 ? positiveLens : negativeLens}
+			geometry={geos[index]}
 			name={'Lens' + lensIndex[index].toString()}
 			position={lensPosi[index]}
 			rotation={[Math.PI / 2, 0, 0]}
-			scale={radius[index]}
 			on:click={onclickLens}
 			let:ref
 		>

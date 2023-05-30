@@ -26,6 +26,41 @@ export function genLensLathe(ap: number, Radius1: number, Radius2: number, ct: n
   return new LatheGeometry(pts1plus.concat(pts2plus.reverse()), radialdivisions, 0, Math.PI * 2)
 }
 
+export function genLensLathe2(ap: number, efl: number, xscale: number, yscale: number, divisionsperlensseg = 21, radialdivisions = 51) {
+  const pts1plus = []
+  const pts2plus = []
+  const step = ap / (divisionsperlensseg - 1)
+
+  const R = ap * 2;
+  let Radius1 = 0;
+  let Radius2 = 0;
+  let ct = 0;
+
+  if (efl >= 0) {
+    Radius1 = R;
+    Radius2 = -R;
+    ct = 2 * calcSag(ap, Radius1, 0) + 1;
+  }
+
+  if (efl < 0) {
+    Radius1 = -R;
+    Radius2 = R;
+    ct = 1
+  }
+
+  // define lens arc
+  for (let i = 0; i < divisionsperlensseg; i++) {
+    const r = i * step
+    //const sag1 = Math.sign(Radius1) * (Math.abs(Radius1) - Math.sqrt(Radius1*Radius1 - r*r))
+    //const sag2 = Math.sign(Radius2) * (Math.abs(Radius2) - Math.sqrt(Radius2*Radius2 - r*r))
+    const sag1 = calcSag(r, Radius1, 0)
+    const sag2 = calcSag(r, Radius2, 0)
+    pts1plus.push(new Vector2(r * yscale, (sag1 - ct) / xscale))
+    pts2plus.push(new Vector2(r * yscale, (sag2 + ct) / xscale))
+  }
+  return new LatheGeometry(pts1plus.concat(pts2plus.reverse()), radialdivisions, 0, Math.PI * 2)
+}
+
 export function toGrid(zpoint: number, scale: number[][]): number {
     // g1 = gridWidth
   // g0 = -gridWidth

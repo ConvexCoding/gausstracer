@@ -4,7 +4,7 @@
 
 	export let scale = 0.75;
 
-	const zoomOn = false;
+	const zoomOn = true;
 	const rotateOn = true;
 	const panOn = true;
 </script>
