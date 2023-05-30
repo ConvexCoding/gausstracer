@@ -1,26 +1,17 @@
 <script lang="ts">
 	import { Text, interactivity } from '@threlte/extras';
-	import { T, forwardEventHandlers, useThrelte } from '@threlte/core';
-	import {
-		BufferGeometry,
-		DoubleSide,
-		LatheGeometry,
-		LineDashedMaterial,
-		Object3D,
-		Vector3
-	} from 'three';
+	import { T } from '@threlte/core';
+	import { BufferGeometry, DoubleSide, LineDashedMaterial, Object3D, Vector3 } from 'three';
 	import { Line2 } from 'three/examples/jsm/lines/Line2';
 	import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial';
 	import LightsCamera from './LightsCamera.svelte';
 
 	import {
-		type WaistPosi,
 		calcZend,
 		genLineSegs,
 		findMinWaists,
 		findWaistSizes,
-		generateLensData,
-		genTypeMap
+		generateLensData
 	} from '$lib/gtrace';
 
 	import {
@@ -28,12 +19,9 @@
 		setAxisLimits,
 		toGrid,
 		genGridLines2,
-		saveTextToFile,
-		converXYtoString,
 		toWorld,
 		genLensLathe
 	} from '$lib/mathUtils';
-	import { type Complex, Matrix2DxComplex, waistSize, beamProps } from '$lib/gcomplex';
 	import Source from '$lib/source';
 	import type GaussOp from '$lib/gaussop';
 
@@ -82,21 +70,10 @@
 		yLabels.push(i);
 	}
 
-	// line data to plot beam trajectory + some data for final waist marker
-	$: linedata = genLineSegs(gpin, source, scaleY, zScale, zinc);
-
-	// find min waists for labeling
-	$: wps = findMinWaists(gpin, source, scaleY, zScale);
-
-	// generate grid lines
-	$: gridLines = genGridLines2(xoffset, gridWidth, horizDivs, gridHeight, vertDivs);
-
-	// location of waist on grid in gridunits
-	$: zWaistGridUnits = toGrid(0, zScale);
-
 	const showwaists = true;
 
 	let lineWidth = 0.005;
+	let lineColor = 0x0000ff;
 
 	function onLineEnter(n: number) {
 		lineWidth = 0.01;
@@ -106,6 +83,10 @@
 		lineWidth = 0.005;
 	}
 
+	// this gauss beam line is one continous line
+	// this function is designed to find out which
+	// line segment is click or maybe it is more
+	// accurate to say which air gap is clicked.
 	let gpDistIndex = -1; // if user presses number key change the gp index
 	function findIndex(z: number): number {
 		let index = -1;
@@ -132,22 +113,22 @@
 		const keys = Object.keys(e);
 		if (keys.includes('pointOnLine')) {
 			const point = e['pointOnLine' as keyof MouseEvent] as unknown as Vector3;
-			//console.log('point: ', point.z);
 			const trackz = toWorld(point.z, zScale);
-			//console.log('🚀 ~ trackz:', trackz);
 			const newIndex = findIndex(trackz);
 			if (newIndex === gpDistIndex) {
 				gpDistIndex = -1;
 				gpLensIndex = -1;
+				lineColor = 0x0000ff;
 			} else {
 				gpDistIndex = newIndex;
 				gpLensIndex = -1;
+				lineColor = 0x00ff00;
 			}
-			console.log('🚀 ~ gpDistIndex:', gpDistIndex);
 		}
 	}
 
 	let gpLensIndex = -1;
+	let backupcolor = 'white';
 	function onclickLens(e: MouseEvent) {
 		if (Object.keys(e).includes('object')) {
 			const objInfo = e['object' as keyof MouseEvent] as unknown as Object3D;
@@ -155,13 +136,24 @@
 				const name = objInfo['name' as keyof Object3D] as unknown as string;
 				console.log(name);
 				if (name.includes('Lens')) {
+					lineColor = 0x0000ff;
 					const index = parseInt(name.slice(-1));
+					// this happens if another lens is clicked
+					// when one is already active
+					if (index > 0 && gpLensIndex > 0) {
+						gpin[gpLensIndex].color = backupcolor;
+					}
+					// no swap colors for activated lens or
+					// deactivate lens and reset colors
 					if (index === gpLensIndex) {
+						gpin[index].color = backupcolor;
 						gpLensIndex = -1;
 						gpDistIndex = -1;
 					} else {
 						gpLensIndex = index;
 						gpDistIndex = -1;
+						backupcolor = gpin[index].color;
+						gpin[index].color = 'white';
 					}
 					//console.log('final index', index, typeof index);
 				}
@@ -169,6 +161,51 @@
 		}
 	}
 
+	/** @param {KeyboardEvent} e */
+	function onKeyDown(e: KeyboardEvent) {
+		if (gpDistIndex === -1 && gpLensIndex === -1) {
+			// quick exit - nothing selected
+			return;
+		}
+		if (gpDistIndex >= 0 && gpDistIndex < gpin.length) {
+			switch (e.key) {
+				case 'a':
+				case 'ArrowLeft':
+					gpin[gpDistIndex].value -= 10;
+					upDateCanvas();
+					break;
+
+				case 'd':
+				case 'ArrowRight':
+					gpin[gpDistIndex].value += 10;
+					upDateCanvas();
+					break;
+
+				default:
+					break;
+			}
+		}
+		if (gpLensIndex >= 0 && gpLensIndex < gpin.length) {
+			switch (e.key) {
+				case 'a':
+				case 'ArrowLeft':
+					gpin[gpLensIndex].value -= 5;
+					upDateCanvas();
+					break;
+
+				case 'd':
+				case 'ArrowRight':
+					gpin[gpLensIndex].value += 5;
+					upDateCanvas();
+					break;
+
+				default:
+					break;
+			}
+		}
+	}
+
+	// update canvas scaling factors and other parameters
 	function upDateCanvas() {
 		zend = calcZend(gpin);
 		scaleZ = (2 * gridWidth) / (zend - zstart);
@@ -183,64 +220,17 @@
 		scaleY = gridHeight / maxY;
 	}
 
-	/** @param {KeyboardEvent} e */
-	function onKeyDown(e: KeyboardEvent) {
-		if (gpDistIndex === -1 && gpLensIndex === -1) {
-			return;
-		}
-		if (gpDistIndex >= 0 && gpDistIndex < gpin.length) {
-			switch (e.key) {
-				case 'a':
-					gpin[gpDistIndex].value -= 10;
-					upDateCanvas();
-					break;
+	// line data to plot beam trajectory + some data for final waist marker
+	$: linedata = genLineSegs(gpin, source, scaleY, zScale, zinc);
 
-				case 'ArrowLeft':
-					gpin[gpDistIndex].value -= 10;
-					upDateCanvas();
-					break;
+	// find min waists for labeling
+	$: wps = findMinWaists(gpin, source, scaleY, zScale);
 
-				case 'd':
-					gpin[gpDistIndex].value += 10;
-					upDateCanvas();
-					break;
+	// generate grid lines
+	$: gridLines = genGridLines2(xoffset, gridWidth, horizDivs, gridHeight, vertDivs);
 
-				case 'ArrowRight':
-					gpin[gpDistIndex].value += 10;
-					upDateCanvas();
-					break;
-
-				default:
-					break;
-			}
-		}
-		if (gpLensIndex >= 0 && gpLensIndex < gpin.length) {
-			switch (e.key) {
-				case 'a':
-					gpin[gpLensIndex].value -= 5;
-					upDateCanvas();
-					break;
-
-				case 'ArrowLeft':
-					gpin[gpLensIndex].value -= 5;
-					upDateCanvas();
-					break;
-
-				case 'd':
-					gpin[gpLensIndex].value += 5;
-					upDateCanvas();
-					break;
-
-				case 'ArrowRight':
-					gpin[gpLensIndex].value += 5;
-					upDateCanvas();
-					break;
-
-				default:
-					break;
-			}
-		}
-	}
+	// location of waist on grid in gridunits
+	$: zWaistGridUnits = toGrid(0, zScale);
 
 	// generate lens for plot
 	$: [radius, lensPosi, gop, lensIndex, eflLabelPosi] = generateLensData(
@@ -263,7 +253,7 @@
 	<T
 		is={Line2}
 		geometry={genLineSegment(linedata[0])}
-		material={new LineMaterial({ color: 0x0000ff, linewidth: lineWidth })}
+		material={new LineMaterial({ color: lineColor, linewidth: lineWidth })}
 		on:pointerenter={onLineEnter}
 		on:pointerleave={onLineLeave}
 		on:click={onclickLine}
@@ -271,7 +261,7 @@
 	<T
 		is={Line2}
 		geometry={genLineSegment(linedata[1])}
-		material={new LineMaterial({ color: 0x0000ff, linewidth: lineWidth })}
+		material={new LineMaterial({ color: lineColor, linewidth: lineWidth })}
 		on:pointerenter={onLineEnter}
 		on:pointerleave={onLineLeave}
 		on:click={onclickLine}
@@ -385,7 +375,7 @@
 		visible={false}
 	>
 		<Text
-			text={waistvalue.toFixed(2)}
+			text={source.waist.toFixed(2)}
 			color={0x000000}
 			fontSize={8}
 			anchorX={'center'}
@@ -400,7 +390,7 @@
 		visible={false}
 	>
 		<Text
-			text={'-' + waistvalue.toFixed(2)}
+			text={'-' + source.waist.toFixed(2)}
 			color={0x000000}
 			fontSize={8}
 			anchorX={'center'}
