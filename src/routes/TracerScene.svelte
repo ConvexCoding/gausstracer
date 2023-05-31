@@ -11,7 +11,8 @@
 		genLineSegs,
 		findMinWaists,
 		findWaistSizes,
-		generateLensData
+		generateLensData,
+		genLineSegArray
 	} from '$lib/gtrace';
 
 	import {
@@ -30,6 +31,8 @@
 
 	const titletext = 'Gaussian Beam Tracer';
 	const showwaists = true;
+	const showSolidLines = false;
+	const showSegLines = true;
 
 	interactivity();
 
@@ -105,6 +108,10 @@
 	}
 
 	function onclickLine(e: MouseEvent) {
+		if (gpLensIndex > -1) {
+			gpin[gpLensIndex].color = backupcolor;
+			gpLensIndex = -1;
+		}
 		const keys = Object.keys(e);
 		if (keys.includes('pointOnLine')) {
 			const point = e['pointOnLine' as keyof MouseEvent] as unknown as Vector3;
@@ -112,11 +119,9 @@
 			const newIndex = findIndex(trackz);
 			if (newIndex === gpDistIndex) {
 				gpDistIndex = -1;
-				gpLensIndex = -1;
 				lineColor = 0x0000ff;
 			} else {
 				gpDistIndex = newIndex;
-				gpLensIndex = -1;
 				lineColor = 0x00ff00;
 			}
 		}
@@ -217,6 +222,7 @@
 
 	// line data to plot beam trajectory + some data for final waist marker
 	$: linedata = genLineSegs(gpin, source, scaleY, zScale, zinc);
+	$: [psegs, nsegs] = genLineSegArray(gpin, source, scaleY, zScale, zinc);
 
 	// find min waists for labeling
 	$: wps = findMinWaists(gpin, source, scaleY, zScale);
@@ -243,24 +249,50 @@
 <LightsCamera scale={0.6} />
 
 <!-- plus & negative waist profile lines -->
-<T.Mesh>
-	<T
-		is={Line2}
-		geometry={genLineSegment(linedata[0])}
-		material={new LineMaterial({ color: lineColor, linewidth: lineWidth })}
-		on:pointerenter={onLineEnter}
-		on:pointerleave={onLineLeave}
-		on:click={onclickLine}
-	/>
-	<T
-		is={Line2}
-		geometry={genLineSegment(linedata[1])}
-		material={new LineMaterial({ color: lineColor, linewidth: lineWidth })}
-		on:pointerenter={onLineEnter}
-		on:pointerleave={onLineLeave}
-		on:click={onclickLine}
-	/>
-</T.Mesh>
+{#if showSolidLines}
+	<T.Mesh>
+		<T
+			is={Line2}
+			geometry={genLineSegment(linedata[0])}
+			material={new LineMaterial({ color: lineColor, linewidth: lineWidth })}
+			on:pointerenter={onLineEnter}
+			on:pointerleave={onLineLeave}
+			on:click={onclickLine}
+		/>
+		<T
+			is={Line2}
+			geometry={genLineSegment(linedata[1])}
+			material={new LineMaterial({ color: lineColor, linewidth: lineWidth })}
+			on:pointerenter={onLineEnter}
+			on:pointerleave={onLineLeave}
+			on:click={onclickLine}
+		/>
+	</T.Mesh>
+{/if}
+
+<!-- plus & negative waist profile lines -->
+{#if showSegLines}
+	{#each { length: psegs.length } as _, index}
+		<T.Mesh>
+			<T
+				is={Line2}
+				geometry={genLineSegment(psegs[index])}
+				material={new LineMaterial({ color: lineColor, linewidth: lineWidth })}
+				on:pointerenter={onLineEnter}
+				on:pointerleave={onLineLeave}
+				on:click={onclickLine}
+			/>
+			<T
+				is={Line2}
+				geometry={genLineSegment(nsegs[index])}
+				material={new LineMaterial({ color: lineColor, linewidth: lineWidth })}
+				on:pointerenter={onLineEnter}
+				on:pointerleave={onLineLeave}
+				on:click={onclickLine}
+			/>
+		</T.Mesh>
+	{/each}
+{/if}
 
 <!-- lenses  	[radius, lensPosi, gop, eflLabelPosi, geos] -->
 {#if radius.length > 0}

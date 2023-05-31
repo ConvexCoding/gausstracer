@@ -33,7 +33,8 @@
 
 	function ShowAndHide() {
 		var x = document.getElementById('SectionName');
-		if (x.style.display == 'none') {
+		if (x === null) return;
+		if (x.style.display === 'none') {
 			arrow = 'Source Control --- ^';
 			x.style.display = 'block';
 		} else {
@@ -104,7 +105,7 @@
 			accent="accent-surface-900 dark:accent-surface-300  mb-5"
 			bind:value={ior}
 			min={1}
-			max={4}
+			max={5}
 			step={0.05}
 		>
 			<div class="flex justify-between items-center self-end">
