@@ -81,7 +81,7 @@
 		lineWidth = 0.005;
 	}
 
-	// this gauss beam line is one continous line
+	// if gauss beam line is one continous line
 	// this function is designed to find out which
 	// line segment is click or maybe it is more
 	// accurate to say which air gap is clicked.
@@ -134,7 +134,6 @@
 			const objInfo = e['object' as keyof MouseEvent] as unknown as Object3D;
 			if (Object.keys(objInfo).includes('name')) {
 				const name = objInfo['name' as keyof Object3D] as unknown as string;
-				console.log(name);
 				if (name.includes('Lens')) {
 					lineColor = 0x0000ff;
 					const index = parseInt(name.slice(-1));

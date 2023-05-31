@@ -36,16 +36,18 @@ export function genLensLathe2(ap: number, efl: number, xscale: number, yscale: n
   let Radius2 = 0;
   let ct = 0;
 
+  const ctoffset = 4 / xscale; // doing this produces a uniform for all xscales
+
   if (efl >= 0) {
     Radius1 = R;
     Radius2 = -R;
-    ct = 2 * calcSag(ap, Radius1, 0) + 1;
+    ct = 2 * calcSag(ap, Radius1, 0) + ctoffset;
   }
 
   if (efl < 0) {
     Radius1 = -R;
     Radius2 = R;
-    ct = 1
+    ct = ctoffset * 0.75;
   }
 
   // define lens arc
@@ -55,8 +57,8 @@ export function genLensLathe2(ap: number, efl: number, xscale: number, yscale: n
     //const sag2 = Math.sign(Radius2) * (Math.abs(Radius2) - Math.sqrt(Radius2*Radius2 - r*r))
     const sag1 = calcSag(r, Radius1, 0)
     const sag2 = calcSag(r, Radius2, 0)
-    pts1plus.push(new Vector2(r * yscale, (sag1 - ct) / xscale))
-    pts2plus.push(new Vector2(r * yscale, (sag2 + ct) / xscale))
+    pts1plus.push(new Vector2(r * yscale, (sag1 - ct) * xscale))
+    pts2plus.push(new Vector2(r * yscale, (sag2 + ct) * xscale))
   }
   return new LatheGeometry(pts1plus.concat(pts2plus.reverse()), radialdivisions, 0, Math.PI * 2)
 }
