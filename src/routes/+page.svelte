@@ -31,6 +31,9 @@
 	$: ior = 1;
 	$: source = new Source(λ, w0, waistInitialPosition, ior, msq);
 
+	let arrowString = 'M 19 9 l -7 8 -7 -8Z';
+	arrowString = 'M 19 9 l -7 -8 -7 8Z';
+	arrowString = 'M 19 14 l -7 8 -7 -8Z' + 'M 19 9 l -7 -8 -7 8Z';
 	function ShowAndHide() {
 		var x = document.getElementById('SectionName');
 		if (x === null) return;
@@ -73,7 +76,7 @@
 				stroke-linecap="round"
 				stroke-linejoin="round"
 				stroke-width="2"
-				d="M 19 9 l -7 8 -7 -8Z"
+				d={arrowString}
 				fill="white"
 			/></svg
 		></button
