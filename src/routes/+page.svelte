@@ -22,7 +22,7 @@
 	gp.push(new GaussOp('lens', 200 / sf, 1, 'yellow')); // index 4
 	gp.push(new GaussOp('distance', 200 / sf)); // index 5
 	gp.push(new GaussOp('lens', 200 / sf, 1, 'red'));
-	gp.push(new GaussOp('distance', 200 / sf)); // index 7
+	gp.push(new GaussOp('distance', 100 / sf)); // index 7
 
 	$: λ = 1.07;
 	const waistInitialPosition = 0;

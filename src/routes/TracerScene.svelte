@@ -12,7 +12,8 @@
 		findMinWaists,
 		findWaistSizes,
 		generateLensData,
-		genLineSegArray
+		genLineSegArray,
+		genTypeMap
 	} from '$lib/gtrace';
 
 	import {
@@ -24,7 +25,8 @@
 		genLensLathe
 	} from '$lib/mathUtils';
 	import Source from '$lib/source';
-	import type GaussOp from '$lib/gaussop';
+	import GaussOp from '$lib/gaussop';
+	import { getMeshIndex } from '$lib/meshUtils';
 
 	export let gpin: GaussOp[] = [];
 	export let source: Source = new Source(1.07, 1, 0, 3);
@@ -33,6 +35,8 @@
 	const showwaists = true;
 	const showSolidLines = false;
 	const showSegLines = true;
+	let showEFLs = true;
+	let showDistances = false;
 
 	interactivity();
 
@@ -64,6 +68,7 @@
 	// calculate y axis parameters (waist size)
 	let maxY = 5; // manually set max y for now, it will be updated later
 	let scaleY = gridHeight / maxY; // scale about center of plot 0 in Y axis
+	upDateCanvas();
 
 	const yLabels: number[] = [];
 	for (let i = -gridHeight; i <= gridHeight; i += gridHeight / horizDivs) {
@@ -72,14 +77,6 @@
 
 	let lineWidth = 0.005;
 	let lineColor = 0x0000ff;
-
-	function onLineEnter(n: number) {
-		lineWidth = 0.01;
-	}
-
-	function onLineLeave(n: number) {
-		lineWidth = 0.005;
-	}
 
 	// if gauss beam line is one continous line
 	// this function is designed to find out which
@@ -125,6 +122,35 @@
 				lineColor = 0x00ff00;
 			}
 		}
+	}
+
+	function ondblclickLine(e: MouseEvent) {
+		console.log('double click');
+		if (gpLensIndex > -1) {
+			gpin[gpLensIndex].color = backupcolor;
+			gpLensIndex = -1;
+		}
+		const keys = Object.keys(e);
+		if (keys.includes('pointOnLine')) {
+			const point = e['pointOnLine' as keyof MouseEvent] as unknown as Vector3;
+			const trackz = toWorld(point.z, zScale);
+			const newIndex = findIndex(trackz);
+			const dsum = gpin[newIndex].value;
+			gpin[newIndex].value = trackz - distanceTo(gpin, newIndex);
+			gpin.splice(newIndex + 1, 0, new GaussOp('lens', 3000, 1, 'blue'));
+			gpin.splice(newIndex + 2, 0, new GaussOp('distance', dsum - gpin[newIndex].value));
+			console.log('double click line', trackz, newIndex);
+		}
+	}
+
+	function distanceTo(gps: GaussOp[], index: number): number {
+		let dist = 0;
+		for (let i = 0; i < index; i++) {
+			if (gps[i].type === 'distance') {
+				dist += gps[i].value;
+			}
+		}
+		return dist;
 	}
 
 	let gpLensIndex = -1;
@@ -223,6 +249,7 @@
 	$: linedata = genLineSegs(gpin, source, scaleY, zScale, zinc);
 	$: [psegs, nsegs] = genLineSegArray(gpin, source, scaleY, zScale, zinc);
 
+	$: distanceMap = genTypeMap(gpin, 'distance');
 	// find min waists for labeling
 	$: wps = findMinWaists(gpin, source, scaleY, zScale);
 
@@ -240,6 +267,37 @@
 		scaleY,
 		zScale
 	);
+
+	function onLineEnter(e: MouseEvent) {
+		const index = getMeshIndex(e, 'line');
+		showEFLs = false;
+		showDistances = true;
+		lineWidth = 0.01;
+		console.log('line enter', index);
+	}
+
+	function onLineLeave(e: MouseEvent) {
+		showEFLs = true;
+		showDistances = false;
+		lineWidth = 0.005;
+	}
+
+	function centerLine(lineseg: Float32Array, yoffset: number): [number, number, number] {
+		const center = lineseg.length / 3 / 2;
+		const centerIndex = Math.floor(center);
+		console.log('center', center, centerIndex);
+		console.log(
+			'center triplet',
+			lineseg[centerIndex * 3],
+			lineseg[centerIndex * 3 + 1],
+			lineseg[centerIndex * 3 + 2]
+		);
+		return [
+			lineseg[centerIndex * 3],
+			lineseg[centerIndex * 3 + 1] + yoffset,
+			lineseg[centerIndex * 3 + 2]
+		];
+	}
 </script>
 
 <svelte:window on:keydown|preventDefault={onKeyDown} />
@@ -277,19 +335,33 @@
 				is={Line2}
 				geometry={genLineSegment(psegs[index])}
 				material={new LineMaterial({ color: lineColor, linewidth: lineWidth })}
+				name={'line' + index}
 				on:pointerenter={onLineEnter}
 				on:pointerleave={onLineLeave}
 				on:click={onclickLine}
+				on:dblclick={ondblclickLine}
 			/>
 			<T
 				is={Line2}
 				geometry={genLineSegment(nsegs[index])}
 				material={new LineMaterial({ color: lineColor, linewidth: lineWidth })}
+				name={'line' + index}
 				on:pointerenter={onLineEnter}
 				on:pointerleave={onLineLeave}
 				on:click={onclickLine}
 			/>
 		</T.Mesh>
+		{#if showDistances}
+			<T.Mesh position={centerLine(psegs[index], 5)} rotation.y={-Math.PI / 2}>
+				<Text
+					text={'d=' + gpin[distanceMap[index]].value}
+					color={0x000000}
+					fontSize={8}
+					anchorX={'center'}
+					anchorY={'bottom'}
+				/>
+			</T.Mesh>
+		{/if}
 	{/each}
 {/if}
 
@@ -312,17 +384,17 @@
 				shininess={100}
 			/>
 		</T.Mesh>
-
-		<T.Mesh position={eflLabelPosi[index]} rotation.y={-Math.PI / 2}>
-			<Text
-				text={'f' + lensIndex[index].toString() + ' = ' + gop[index].value.toFixed(0) + ' mm'}
-				color={0x000000}
-				fontSize={8}
-				anchorX={'center'}
-				anchorY={'bottom'}
-			/>
-		</T.Mesh>
-
+		{#if showEFLs}
+			<T.Mesh position={eflLabelPosi[index]} rotation.y={-Math.PI / 2}>
+				<Text
+					text={'f' + lensIndex[index].toString() + ' = ' + gop[index].value.toFixed(0) + ' mm'}
+					color={0x000000}
+					fontSize={8}
+					anchorX={'center'}
+					anchorY={'bottom'}
+				/>
+			</T.Mesh>
+		{/if}
 		<!--
 		<Lens
 			radius={lenses[0][index]}
@@ -349,7 +421,7 @@
 				/>
 			</T.Mesh>
 
-			<T.Mesh position={[xoffset, -wp.waist - 10, wp.zscaled]} rotation.x={0}>
+			<T.Mesh position={[xoffset, -wp.yscaled - 6, wp.zscaled]} rotation.x={0}>
 				<T.ConeGeometry args={[3, 12]} />
 				<T.MeshStandardMaterial color={'red'} />
 			</T.Mesh>
@@ -435,6 +507,7 @@
 		</T.Mesh>
 	{/each}
 
+	<!-- vertical axis labels -->
 	{#each yLabels as vl}
 		<T.Mesh position={[xoffset, vl, -gridWidth - 5]} rotation.y={-Math.PI / 2}>
 			<Text
