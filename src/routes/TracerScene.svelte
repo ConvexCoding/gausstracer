@@ -35,6 +35,7 @@
 	const showwaists = true;
 	const showSolidLines = false;
 	const showSegLines = true;
+	const offsetbackground = 2;
 	let showEFLs = true;
 	let showDistances = false;
 
@@ -46,7 +47,6 @@
 	const horizDivs = 5;
 	const gridHeight = 75; // total grid height = 2 * gridHeight
 	const vertDivs = 5;
-	let xoffset = -2; // use this offset to make sure labels are visible
 
 	// **************************************
 	// calculate z or optical axis parameters
@@ -254,7 +254,7 @@
 	$: wps = findMinWaists(gpin, source, scaleY, zScale);
 
 	// generate grid lines
-	$: gridLines = genGridLines2(xoffset, gridWidth, horizDivs, gridHeight, vertDivs);
+	$: gridLines = genGridLines2(0, gridWidth, horizDivs, gridHeight, vertDivs);
 
 	// location of waist on grid in gridunits
 	$: zWaistGridUnits = toGrid(0, zScale);
@@ -268,16 +268,26 @@
 		zScale
 	);
 
+	function onLensEnter(e: MouseEvent) {
+		const index = getMeshIndex(e, 'line');
+		showEFLs = true;
+		lineWidth = 0.01;
+		console.log('line enter', index);
+	}
+
+	function onLensLeave(e: MouseEvent) {
+		showEFLs = false;
+		lineWidth = 0.005;
+	}
+
 	function onLineEnter(e: MouseEvent) {
 		const index = getMeshIndex(e, 'line');
-		showEFLs = false;
 		showDistances = true;
 		lineWidth = 0.01;
 		console.log('line enter', index);
 	}
 
 	function onLineLeave(e: MouseEvent) {
-		showEFLs = true;
 		showDistances = false;
 		lineWidth = 0.005;
 	}
@@ -354,7 +364,7 @@
 		{#if showDistances}
 			<T.Mesh position={centerLine(psegs[index], 5)} rotation.y={-Math.PI / 2}>
 				<Text
-					text={'d=' + gpin[distanceMap[index]].value}
+					text={'d=' + gpin[distanceMap[index]].value.toFixed(0)}
 					color={0x000000}
 					fontSize={8}
 					anchorX={'center'}
@@ -373,6 +383,8 @@
 			name={'Lens' + lensIndex[index].toString()}
 			position={lensPosi[index]}
 			rotation={[Math.PI / 2, 0, 0]}
+			on:pointerenter={onLensEnter}
+			on:pointerleave={onLensLeave}
 			on:click={onclickLens}
 			let:ref
 		>
@@ -414,20 +426,20 @@
 			<T.Mesh>
 				<T.Line
 					geometry={new BufferGeometry().setFromPoints([
-						new Vector3(xoffset, -35, wp.zscaled),
-						new Vector3(xoffset, -wp.yscaled, wp.zscaled)
+						new Vector3(0, -35, wp.zscaled),
+						new Vector3(0, -wp.yscaled, wp.zscaled)
 					])}
 					material={new LineDashedMaterial({ color: 'red' })}
 				/>
 			</T.Mesh>
 
-			<T.Mesh position={[xoffset, -wp.yscaled - 6, wp.zscaled]} rotation.x={0}>
+			<T.Mesh position={[0, -wp.yscaled - 6, wp.zscaled]} rotation.x={0}>
 				<T.ConeGeometry args={[3, 12]} />
 				<T.MeshStandardMaterial color={'red'} />
 			</T.Mesh>
 
 			<!-- Label mid Line -->
-			<T.Mesh position={[xoffset, -35, wp.zscaled]} rotation.y={-Math.PI / 2} visible={true}>
+			<T.Mesh position={[0, -35, wp.zscaled]} rotation.y={-Math.PI / 2} visible={true}>
 				<Text
 					text={'Waist: ' + wp.waist.toFixed(3) + ' mm'}
 					color={'black'}
@@ -441,7 +453,7 @@
 {/if}
 
 <!-- background plane - in this case along Y-Z aaxis -->
-<T.Mesh position={[100, 0, 0]} rotation={[0, 0, 0]} visible={true}>
+<T.Mesh position={[100 + offsetbackground, 0, 0]} rotation={[0, 0, 0]} visible={true}>
 	<T.BoxGeometry args={[1, 2 * gridHeight + 50, 2 * gridWidth + 100]} />
 	<T.MeshStandardMaterial side={DoubleSide} color={'white'} transparent opacity={1} />
 </T.Mesh>
@@ -466,7 +478,7 @@
 <T.Group position={[100, 0, 0]} visible={true}>
 	<!-- add axis label for Waist at X0 -->
 	<T.Mesh
-		position={[xoffset, source.waist * scaleY, zWaistGridUnits]}
+		position={[0, source.waist * scaleY, zWaistGridUnits]}
 		rotation.y={-Math.PI / 2}
 		visible={false}
 	>
@@ -481,7 +493,7 @@
 
 	<!-- add axis label for (-)Waist at X0 -->
 	<T.Mesh
-		position={[xoffset, -source.waist * scaleY, zWaistGridUnits]}
+		position={[0, -source.waist * scaleY, zWaistGridUnits]}
 		rotation.y={-Math.PI / 2}
 		visible={false}
 	>
@@ -496,7 +508,7 @@
 
 	<!-- horizontal axis labels -->
 	{#each zLabels as hl}
-		<T.Mesh position={[xoffset, -gridHeight, hl - 250]} rotation.y={-Math.PI / 2}>
+		<T.Mesh position={[0, -gridHeight, hl - 250]} rotation.y={-Math.PI / 2}>
 			<Text
 				text={(hl / scaleZ).toFixed(0)}
 				color={0x000000}
@@ -509,7 +521,7 @@
 
 	<!-- vertical axis labels -->
 	{#each yLabels as vl}
-		<T.Mesh position={[xoffset, vl, -gridWidth - 5]} rotation.y={-Math.PI / 2}>
+		<T.Mesh position={[0, vl, -gridWidth - 5]} rotation.y={-Math.PI / 2}>
 			<Text
 				text={(vl / scaleY).toFixed(2)}
 				color={0x000000}
@@ -522,6 +534,6 @@
 </T.Group>
 
 <!-- Title -->
-<T.Mesh position={[xoffset + 100, gridHeight, -gridWidth]} rotation.y={-Math.PI / 2} visible={true}>
+<T.Mesh position={[100, gridHeight, -gridWidth]} rotation.y={-Math.PI / 2} visible={true}>
 	<Text text={titletext} color={'black'} fontSize={12} anchorX={'left'} anchorY={'bottom'} />
 </T.Mesh>
