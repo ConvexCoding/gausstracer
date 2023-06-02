@@ -250,6 +250,8 @@
 	$: [psegs, nsegs] = genLineSegArray(gpin, source, scaleY, zScale, zinc);
 
 	$: distanceMap = genTypeMap(gpin, 'distance');
+	$: lensMap = genTypeMap(gpin, 'lens');
+
 	// find min waists for labeling
 	$: wps = findMinWaists(gpin, source, scaleY, zScale);
 
@@ -269,39 +271,32 @@
 	);
 
 	function onLensEnter(e: MouseEvent) {
-		const index = getMeshIndex(e, 'line');
-		showEFLs = true;
-		lineWidth = 0.01;
-		console.log('line enter', index);
+		const index = getMeshIndex(e, 'Lens');
+		gpin[index].tag = true;
+		console.log('line enter', index, lensMap[index]);
 	}
 
 	function onLensLeave(e: MouseEvent) {
-		showEFLs = false;
-		lineWidth = 0.005;
+		const index = getMeshIndex(e, 'Lens');
+		gpin[index].tag = false;
+		console.log('line enter', index, lensMap[index]);
 	}
 
 	function onLineEnter(e: MouseEvent) {
-		const index = getMeshIndex(e, 'line');
-		showDistances = true;
+		const index = getMeshIndex(e, 'Line');
+		gpin[index].tag = true;
 		lineWidth = 0.01;
-		console.log('line enter', index);
 	}
 
 	function onLineLeave(e: MouseEvent) {
-		showDistances = false;
+		const index = getMeshIndex(e, 'Line');
+		gpin[index].tag = false;
 		lineWidth = 0.005;
 	}
 
 	function centerLine(lineseg: Float32Array, yoffset: number): [number, number, number] {
 		const center = lineseg.length / 3 / 2;
 		const centerIndex = Math.floor(center);
-		console.log('center', center, centerIndex);
-		console.log(
-			'center triplet',
-			lineseg[centerIndex * 3],
-			lineseg[centerIndex * 3 + 1],
-			lineseg[centerIndex * 3 + 2]
-		);
 		return [
 			lineseg[centerIndex * 3],
 			lineseg[centerIndex * 3 + 1] + yoffset,
@@ -345,7 +340,7 @@
 				is={Line2}
 				geometry={genLineSegment(psegs[index])}
 				material={new LineMaterial({ color: lineColor, linewidth: lineWidth })}
-				name={'line' + index}
+				name={'Line' + distanceMap[index]}
 				on:pointerenter={onLineEnter}
 				on:pointerleave={onLineLeave}
 				on:click={onclickLine}
@@ -355,13 +350,13 @@
 				is={Line2}
 				geometry={genLineSegment(nsegs[index])}
 				material={new LineMaterial({ color: lineColor, linewidth: lineWidth })}
-				name={'line' + index}
+				name={'Line' + distanceMap[index]}
 				on:pointerenter={onLineEnter}
 				on:pointerleave={onLineLeave}
 				on:click={onclickLine}
 			/>
 		</T.Mesh>
-		{#if showDistances}
+		{#if gpin[distanceMap[index]].tag}
 			<T.Mesh position={centerLine(psegs[index], 5)} rotation.y={-Math.PI / 2}>
 				<Text
 					text={'d=' + gpin[distanceMap[index]].value.toFixed(0)}
@@ -396,10 +391,10 @@
 				shininess={100}
 			/>
 		</T.Mesh>
-		{#if showEFLs}
+		{#if gpin[lensMap[index]].tag}
 			<T.Mesh position={eflLabelPosi[index]} rotation.y={-Math.PI / 2}>
 				<Text
-					text={'f' + lensIndex[index].toString() + ' = ' + gop[index].value.toFixed(0) + ' mm'}
+					text={'f=' + ' = ' + gop[index].value.toFixed(0) + ' mm'}
 					color={0x000000}
 					fontSize={8}
 					anchorX={'center'}

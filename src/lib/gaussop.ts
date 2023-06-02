@@ -6,21 +6,24 @@ export default class GaussOp {
   value: number  
   index: number
   color: string
+  tag: boolean
 
   constructor(
     type: 'distance' | 'lens',
     value: number | string, 
     index: number | string = 1,
     color = 'lightblue',
+    tag = false
   ) {
     this.type = type
     this.value = ensureNumber(value)
     this.index = ensureNumber(index)  
     this.color = color
+    this.tag = tag
   }
 
   clone() {
-    return new GaussOp(this.type, this.value, this.index, this.color)
+    return new GaussOp(this.type, this.value, this.index, this.color, this.tag)
   }
 
   toMatrix2D()  {
