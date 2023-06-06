@@ -27,6 +27,12 @@
 	import Source from '$lib/source';
 	import GaussOp from '$lib/gaussop';
 	import { getMeshIndex } from '$lib/meshUtils';
+	import LensModModal from './LensModModal.svelte';
+	import { modalStore, type ModalComponent, type ModalSettings } from '@skeletonlabs/skeleton';
+
+	let email = '';
+	let phone = '';
+	let name = '';
 
 	export let gpin: GaussOp[] = [];
 	export let source: Source = new Source(1.07, 1, 0, 3);
@@ -186,6 +192,29 @@
 		}
 	}
 
+	function onDoubleClickLens(e: MouseEvent): void {
+		const index = getMeshIndex(e, 'Lens');
+		const c: ModalComponent = { ref: LensModModal };
+		const modal: ModalSettings = {
+			type: 'component',
+			component: c,
+			title: 'Custom Form Component',
+			body: 'Complete the form below and then press submit.',
+			value: ['gopefl', gpin[index].value.toString(), 'gopcolor', gpin[index].color],
+			response: (r: any) => {
+				if (r) {
+					console.log('response', r, typeof r);
+					const efl = r.efl;
+					gpin[index].value = parseFloat(r.efl);
+					gpin[index].color = r.color;
+				} else {
+					console.log('no response');
+				}
+			}
+		};
+		modalStore.trigger(modal);
+	}
+
 	/** @param {KeyboardEvent} e */
 	function onKeyDown(e: KeyboardEvent) {
 		if (gpDistIndex === -1 && gpLensIndex === -1) {
@@ -273,7 +302,7 @@
 	function onLensEnter(e: MouseEvent) {
 		const index = getMeshIndex(e, 'Lens');
 		gpin[index].tag = true;
-		console.log('line enter', index, lensMap[index]);
+		//console.log('line enter', index, lensMap[index]);
 	}
 
 	function onLensLeave(e: MouseEvent) {
@@ -381,6 +410,7 @@
 			on:pointerenter={onLensEnter}
 			on:pointerleave={onLensLeave}
 			on:click={onclickLens}
+			on:dblclick={onDoubleClickLens}
 			let:ref
 		>
 			<T.MeshPhongMaterial
