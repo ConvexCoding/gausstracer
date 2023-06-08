@@ -8,7 +8,6 @@
 
 	import {
 		calcZend,
-		genLineSegs,
 		findMinWaists,
 		findWaistSizes,
 		generateLensData,
@@ -16,30 +15,19 @@
 		genTypeMap
 	} from '$lib/gtrace';
 
-	import {
-		genLineSegment,
-		setAxisLimits,
-		toGrid,
-		genGridLines2,
-		toWorld,
-		genLensLathe
-	} from '$lib/mathUtils';
+	import { genLineSegment, setAxisLimits, toGrid, genGridLines2, toWorld } from '$lib/mathUtils';
 	import Source from '$lib/source';
 	import GaussOp from '$lib/gaussop';
-	import { getMeshIndex } from '$lib/meshUtils';
+	import { combineAdjacentDistances, distanceTo, findIndex } from '$lib/gaussop';
+	import { getMeshIndex, getCtrlKeyInfo, centerLine } from '$lib/meshUtils';
 	import LensModModal from './LensModModal.svelte';
 	import { modalStore, type ModalComponent, type ModalSettings } from '@skeletonlabs/skeleton';
-
-	let email = '';
-	let phone = '';
-	let name = '';
 
 	export let gpin: GaussOp[] = [];
 	export let source: Source = new Source(1.07, 1, 0, 3);
 
 	const titletext = 'Gaussian Beam Tracer';
 	const showwaists = true;
-	const showSolidLines = false;
 	const showSegLines = true;
 	const offsetbackground = 2;
 	let showEFLs = true;
@@ -84,54 +72,35 @@
 	let lineWidth = 0.005;
 	let lineColor = 0x0000ff;
 
-	// if gauss beam line is one continous line
-	// this function is designed to find out which
-	// line segment is click or maybe it is more
-	// accurate to say which air gap is clicked.
 	let gpDistIndex = -1; // if user presses number key change the gp index
-	function findIndex(z: number): number {
-		let index = -1;
-		let A = 0;
-		for (let i = 0; i < gpin.length; i++) {
-			if (gpin[i].type === 'distance') {
-				const B = A + gpin[i].value;
-				if (z > A && z < B) {
-					index = i;
-					//console.log(A, B, i);
-					break;
-				} else {
-					//console.log(A, B, i);
-					A += gpin[i].value;
-				}
-			} else {
-				//console.log('not distance', i);
-			}
-		}
-		return index;
-	}
+	let gpLensIndex = -1;
+	let backupcolor = 'white';
+
+	// *****************************************************************
 
 	function onclickLine(e: MouseEvent) {
+		//		if (getCtrlKeyInfo(e, 'ctrlKey')) return;
+		let newIndex = getMeshIndex(e, 'Line');
 		if (gpLensIndex > -1) {
 			gpin[gpLensIndex].color = backupcolor;
 			gpLensIndex = -1;
 		}
-		const keys = Object.keys(e);
-		if (keys.includes('pointOnLine')) {
-			const point = e['pointOnLine' as keyof MouseEvent] as unknown as Vector3;
-			const trackz = toWorld(point.z, zScale);
-			const newIndex = findIndex(trackz);
+		if (newIndex > -1) {
 			if (newIndex === gpDistIndex) {
 				gpDistIndex = -1;
+				//gpin[newIndex].tag = false;
 				lineColor = 0x0000ff;
 			} else {
+				console.log(newIndex);
+				//gpin[newIndex].tag = true;
 				gpDistIndex = newIndex;
-				lineColor = 0x00ff00;
+				lineColor = 0xff0000;
 			}
 		}
 	}
 
-	function ondblclickLine(e: MouseEvent) {
-		console.log('double click');
+	function onDoubleClickLine(e: MouseEvent) {
+		if (getCtrlKeyInfo(e, 'ctrlKey')) return;
 		if (gpLensIndex > -1) {
 			gpin[gpLensIndex].color = backupcolor;
 			gpLensIndex = -1;
@@ -140,7 +109,7 @@
 		if (keys.includes('pointOnLine')) {
 			const point = e['pointOnLine' as keyof MouseEvent] as unknown as Vector3;
 			const trackz = toWorld(point.z, zScale);
-			const newIndex = findIndex(trackz);
+			const newIndex = findIndex(gpin, trackz);
 			const dsum = gpin[newIndex].value;
 			gpin[newIndex].value = trackz - distanceTo(gpin, newIndex);
 			gpin.splice(newIndex + 1, 0, new GaussOp('lens', 3000, 1, 'blue'));
@@ -149,45 +118,65 @@
 		}
 	}
 
-	function distanceTo(gps: GaussOp[], index: number): number {
-		let dist = 0;
-		for (let i = 0; i < index; i++) {
-			if (gps[i].type === 'distance') {
-				dist += gps[i].value;
-			}
-		}
-		return dist;
+	function onLineEnter(e: MouseEvent) {
+		const index = getMeshIndex(e, 'Line');
+		gpin[index].tag = true;
+		lineWidth = 0.01;
 	}
 
-	let gpLensIndex = -1;
-	let backupcolor = 'white';
-	function onclickLens(e: MouseEvent) {
-		if (Object.keys(e).includes('object')) {
-			const objInfo = e['object' as keyof MouseEvent] as unknown as Object3D;
-			if (Object.keys(objInfo).includes('name')) {
-				const name = objInfo['name' as keyof Object3D] as unknown as string;
-				if (name.includes('Lens')) {
-					lineColor = 0x0000ff;
-					const index = parseInt(name.slice(-1));
-					// this happens if another lens is clicked
-					// when one is already active
-					if (index > 0 && gpLensIndex > 0) {
-						gpin[gpLensIndex].color = backupcolor;
-					}
-					// no swap colors for activated lens or
-					// deactivate lens and reset colors
-					if (index === gpLensIndex) {
-						gpin[index].color = backupcolor;
-						gpLensIndex = -1;
-						gpDistIndex = -1;
-					} else {
-						gpLensIndex = index;
-						gpDistIndex = -1;
-						backupcolor = gpin[index].color;
-						gpin[index].color = 'white';
-					}
-					//console.log('final index', index, typeof index);
+	function onLineLeave(e: MouseEvent) {
+		const index = getMeshIndex(e, 'Line');
+		gpin[index].tag = false;
+		lineWidth = 0.005;
+	}
+
+	// *****************************************************************
+
+	function onClickLens(e: MouseEvent) {
+		const isCtrlKeyPressed = getCtrlKeyInfo(e, 'ctrlKey');
+		const index = getMeshIndex(e, 'Lens');
+		if (index > -1) {
+			if (!isCtrlKeyPressed) {
+				lineColor = 0x0000ff;
+				// this happens if another lens is clicked
+				// when one is already active
+				if (index > 0 && gpLensIndex > 0) {
+					gpin[gpLensIndex].color = backupcolor;
 				}
+				// now swap colors for activated lens or
+				// deactivate lens and reset colors
+				if (index === gpLensIndex) {
+					gpin[index].color = backupcolor;
+					gpLensIndex = -1;
+					gpDistIndex = -1;
+				} else {
+					gpLensIndex = index;
+					gpDistIndex = -1;
+					backupcolor = gpin[index].color;
+					gpin[index].color = 'white';
+				}
+				//console.log('final index', index, typeof index);
+			} else {
+				const modal: ModalSettings = {
+					type: 'confirm',
+					// Data
+					title: 'Please Confirm - Delete Lens?',
+					body: 'Are you sure you wish to delete lens?',
+					// TRUE if confirm pressed, FALSE if cancel pressed
+					response: (r: boolean) => {
+						console.log('response:', r);
+						if (r) {
+							gpin.splice(index, 1);
+							gpLensIndex = -1;
+							gpDistIndex = -1;
+							upDateCanvas();
+							console.log(gpin);
+							gpin = combineAdjacentDistances(gpin);
+							console.log(gpin);
+						}
+					}
+				};
+				modalStore.trigger(modal);
 			}
 		}
 	}
@@ -215,7 +204,20 @@
 		modalStore.trigger(modal);
 	}
 
-	/** @param {KeyboardEvent} e */
+	function onLensEnter(e: MouseEvent) {
+		const index = getMeshIndex(e, 'Lens');
+		gpin[index].tag = true;
+		//console.log('line enter', index, lensMap[index]);
+	}
+
+	function onLensLeave(e: MouseEvent) {
+		const index = getMeshIndex(e, 'Lens');
+		gpin[index].tag = false;
+		console.log('line enter', index, lensMap[index]);
+	}
+
+	// *****************************************************************
+
 	function onKeyDown(e: KeyboardEvent) {
 		if (gpDistIndex === -1 && gpLensIndex === -1) {
 			// quick exit - nothing selected
@@ -259,6 +261,14 @@
 		}
 	}
 
+	// *****************************************************************
+
+	function deleteLens(gops: GaussOp, index: number): GaussOp[] {
+		return gops;
+	}
+
+	// *****************************************************************
+
 	// update canvas scaling factors and other parameters
 	function upDateCanvas() {
 		zend = calcZend(gpin);
@@ -274,12 +284,11 @@
 		scaleY = gridHeight / maxY;
 	}
 
-	// line data to plot beam trajectory + some data for final waist marker
-	$: linedata = genLineSegs(gpin, source, scaleY, zScale, zinc);
 	$: [psegs, nsegs] = genLineSegArray(gpin, source, scaleY, zScale, zinc);
 
 	$: distanceMap = genTypeMap(gpin, 'distance');
 	$: lensMap = genTypeMap(gpin, 'lens');
+	$: lineMap = genTypeMap(gpin, 'distance');
 
 	// find min waists for labeling
 	$: wps = findMinWaists(gpin, source, scaleY, zScale);
@@ -298,40 +307,6 @@
 		scaleY,
 		zScale
 	);
-
-	function onLensEnter(e: MouseEvent) {
-		const index = getMeshIndex(e, 'Lens');
-		gpin[index].tag = true;
-		//console.log('line enter', index, lensMap[index]);
-	}
-
-	function onLensLeave(e: MouseEvent) {
-		const index = getMeshIndex(e, 'Lens');
-		gpin[index].tag = false;
-		console.log('line enter', index, lensMap[index]);
-	}
-
-	function onLineEnter(e: MouseEvent) {
-		const index = getMeshIndex(e, 'Line');
-		gpin[index].tag = true;
-		lineWidth = 0.01;
-	}
-
-	function onLineLeave(e: MouseEvent) {
-		const index = getMeshIndex(e, 'Line');
-		gpin[index].tag = false;
-		lineWidth = 0.005;
-	}
-
-	function centerLine(lineseg: Float32Array, yoffset: number): [number, number, number] {
-		const center = lineseg.length / 3 / 2;
-		const centerIndex = Math.floor(center);
-		return [
-			lineseg[centerIndex * 3],
-			lineseg[centerIndex * 3 + 1] + yoffset,
-			lineseg[centerIndex * 3 + 2]
-		];
-	}
 </script>
 
 <svelte:window on:keydown|preventDefault={onKeyDown} />
@@ -340,45 +315,29 @@
 <LightsCamera scale={0.6} />
 
 <!-- plus & negative waist profile lines -->
-{#if showSolidLines}
-	<T.Mesh>
-		<T
-			is={Line2}
-			geometry={genLineSegment(linedata[0])}
-			material={new LineMaterial({ color: lineColor, linewidth: lineWidth })}
-			on:pointerenter={onLineEnter}
-			on:pointerleave={onLineLeave}
-			on:click={onclickLine}
-		/>
-		<T
-			is={Line2}
-			geometry={genLineSegment(linedata[1])}
-			material={new LineMaterial({ color: lineColor, linewidth: lineWidth })}
-			on:pointerenter={onLineEnter}
-			on:pointerleave={onLineLeave}
-			on:click={onclickLine}
-		/>
-	</T.Mesh>
-{/if}
-
-<!-- plus & negative waist profile lines -->
 {#if showSegLines}
 	{#each { length: psegs.length } as _, index}
 		<T.Mesh>
 			<T
 				is={Line2}
 				geometry={genLineSegment(psegs[index])}
-				material={new LineMaterial({ color: lineColor, linewidth: lineWidth })}
+				material={new LineMaterial({
+					color: lineColor,
+					linewidth: gpin[lineMap[index]].tag ? 0.01 : 0.005
+				})}
 				name={'Line' + distanceMap[index]}
 				on:pointerenter={onLineEnter}
 				on:pointerleave={onLineLeave}
 				on:click={onclickLine}
-				on:dblclick={ondblclickLine}
+				on:dblclick={onDoubleClickLine}
 			/>
 			<T
 				is={Line2}
 				geometry={genLineSegment(nsegs[index])}
-				material={new LineMaterial({ color: lineColor, linewidth: lineWidth })}
+				material={new LineMaterial({
+					color: lineColor,
+					linewidth: gpin[lineMap[index]].tag ? 0.01 : 0.005
+				})}
 				name={'Line' + distanceMap[index]}
 				on:pointerenter={onLineEnter}
 				on:pointerleave={onLineLeave}
@@ -409,7 +368,7 @@
 			rotation={[Math.PI / 2, 0, 0]}
 			on:pointerenter={onLensEnter}
 			on:pointerleave={onLensLeave}
-			on:click={onclickLens}
+			on:click={onClickLens}
 			on:dblclick={onDoubleClickLens}
 			let:ref
 		>
@@ -562,3 +521,27 @@
 <T.Mesh position={[100, gridHeight, -gridWidth]} rotation.y={-Math.PI / 2} visible={true}>
 	<Text text={titletext} color={'black'} fontSize={12} anchorX={'left'} anchorY={'bottom'} />
 </T.Mesh>
+
+<!-- plus & negative waist profile lines -->
+<!--
+{#if showSolidLines}
+	<T.Mesh>
+		<T
+			is={Line2}
+			geometry={genLineSegment(linedata[0])}
+			material={new LineMaterial({ color: lineColor, linewidth: lineWidth })}
+			on:pointerenter={onLineEnter}
+			on:pointerleave={onLineLeave}
+			on:click={onclickLine}
+		/>
+		<T
+			is={Line2}
+			geometry={genLineSegment(linedata[1])}
+			material={new LineMaterial({ color: lineColor, linewidth: lineWidth })}
+			on:pointerenter={onLineEnter}
+			on:pointerleave={onLineLeave}
+			on:click={onclickLine}
+		/>
+	</T.Mesh>
+{/if}
+-->
