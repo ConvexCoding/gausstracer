@@ -100,9 +100,9 @@
 			name="waist-slider"
 			accent="accent-surface-900 dark:accent-surface-300  mb-5"
 			bind:value={w0}
-			min={0.5}
+			min={0.01}
 			max={10}
-			step={0.5}
+			step={0.01}
 		>
 			<div class="flex justify-between items-center">
 				<div class="text-xs font-bold">w0</div>

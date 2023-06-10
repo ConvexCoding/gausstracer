@@ -15,8 +15,7 @@
 
 	$: lensData = {
 		color: lenscolor,
-		efl: focal,
-		cpick: lenscolor
+		efl: focal
 	};
 
 	function changeColor(e: Event) {
@@ -35,22 +34,37 @@
 	}
 
 	function fillEFL(e: KeyboardEvent) {
+		// first check for tab or shift tab
+		if (e.key === 'Tab') {
+			console.log('tab key press: ', e.key);
+			const gotoColors = document.getElementById('lens-colors') as HTMLInputElement;
+			gotoColors.focus();
+			return;
+		}
 		if (e.key === 'Backspace') {
 			if (lensData.efl.length > 0) {
 				lensData.efl = lensData.efl.slice(0, -1);
 			}
 		} else {
-			lensData.efl += e.key;
+			const allowedKeys = /^[-\d.]$/;
+			if (allowedKeys.test(e.key)) {
+				lensData.efl += e.key;
+			} else {
+				e.preventDefault();
+			}
 		}
 	}
 
-	function fillColor(e: KeyboardEvent) {
-		if (e.key === 'Backspace') {
-			if (lensData.color.length > 0) {
-				lensData.color = lensData.color.slice(0, -1);
-			}
-		} else {
-			lensData.color += e.key;
+	function moveFocusfromColor(e: KeyboardEvent) {
+		if (e.shiftKey && e.key === 'Tab') {
+			console.log('shift tab key press: ', e.shiftKey, e.key);
+			const newID = document.getElementById('efl') as HTMLInputElement;
+			newID.focus();
+			return;
+		}
+		if (e.key === 'Tab') {
+			const newID = document.getElementById('accept-button') as HTMLInputElement;
+			newID.focus();
 		}
 	}
 
@@ -64,27 +78,15 @@
 
 {#if $modalStore[0]}
 	<div class="modal-example-form {cBase}">
-		<header class={cHeader}>Modify Lens Property</header>
-		<article>Enter New EFL or Cancel</article>
+		<header class={cHeader}>{$modalStore[0].title ?? '(title missing)'}</header>
 		<!-- Enable for debugging: -->
 		<form class="modal-form {cForm}">
-			<label class="label">
-				<span>Lens Color</span>
-				<input
-					id="color"
-					class="input"
-					type="tel"
-					bind:value={lensData.color}
-					placeholder="Lens Color"
-					on:keydown={fillColor}
-				/>
-			</label>
-
 			<label class="label">
 				<span>EFL</span>
 				<input
 					id="efl"
-					class="input"
+					tabindex="0"
+					class="input pl-3"
 					type="efl"
 					bind:value={lensData.efl}
 					placeholder="Lens EFL"
@@ -98,15 +100,22 @@
 				min={5}
 				max={300}
 				step={5}
+				tabindex="0"
 				on:change={updateEFL}
 			>
 				<div class="flex justify-between items-center">
-					<div class="text-xs font-bold">efl</div>
-					<div class="text-xs font-bold">{lensData.efl} / {300}</div>
+					<div class="text-lg">EFL</div>
+					<div class="text-lg">{lensData.efl} / {300}</div>
 				</div>
 			</RangeSlider>
-			<label for="dog-names">Enter Lens Color:</label>
-			<select name="lens-colors" id="lens-colors" on:change={changeColor}>
+			<label for="dog-names">Lens Color:</label>
+			<select
+				name="lens-colors"
+				id="lens-colors"
+				tabindex="0"
+				on:change={changeColor}
+				on:keydown={moveFocusfromColor}
+			>
 				{#each colorKeywordNames as color}
 					{#if color === lenscolor}
 						<option value={color} selected>{color}</option>
@@ -118,8 +127,8 @@
 		</form>
 		<!-- prettier-ignore -->
 		<footer class="modal-footer {parent.regionFooter}">
-        <button class="btn {parent.buttonNeutral}" on:click={parent.onClose}>{parent.buttonTextCancel}</button>
-        <button class="btn {parent.buttonPositive}" on:click={onFormSubmit}>Submit Form</button>
+        <button class="btn {parent.buttonNeutral}" id="cancel-button" on:click={parent.onClose}>{parent.buttonTextCancel}</button>
+        <button class="btn {parent.buttonPositive}" id="accept-button" on:click={onFormSubmit}>Accept</button>
     </footer>
 	</div>
 {/if}

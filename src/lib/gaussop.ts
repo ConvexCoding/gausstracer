@@ -38,35 +38,24 @@ export default class GaussOp {
   }
 }
 
-export function combineAdjacentDistances(gaussOps: GaussOp[]): GaussOp[] {
-  const combinedGaussOps: GaussOp[] = [];
-
-  for (let i = 0; i < gaussOps.length; i++) {
+export function combineAdjacentDistances(gaussOps: GaussOp[]): void {
+  let i = 0;
+  while (i < gaussOps.length) {
     const currentOp = gaussOps[i];
 
     if (currentOp.type === 'distance') {
-      const combinedDistanceOp = new GaussOp(
-        'distance',
-        currentOp.value,
-        currentOp.index,
-        currentOp.color,
-        currentOp.tag
-      );
-
-      let j = i + 1;
+      let combinedDistance = currentOp.value;
+      const j = i + 1;
       while (j < gaussOps.length && gaussOps[j].type === 'distance') {
-        combinedDistanceOp.value += gaussOps[j].value;
-        j++;
+        combinedDistance += gaussOps[j].value;
+        gaussOps.splice(j, 1); // Remove the combined distance element
       }
-
-      combinedGaussOps.push(combinedDistanceOp);
-      i = j - 1; // skip already combined distances
+      currentOp.value = combinedDistance;
+      i++; // Move to the next element after the combined distances
     } else {
-      combinedGaussOps.push(currentOp);
+      i++; // Move to the next element
     }
   }
-
-  return combinedGaussOps;
 }
 
 export function distanceTo(gops: GaussOp[], index: number): number {
@@ -94,5 +83,13 @@ export function findIndex(gops: GaussOp[], z: number): number {
     }
   }
   return index;
+}
+
+export function addLens(gops: GaussOp[], trackz: number): void {
+  const newIndex = findIndex(gops, trackz);
+    const dsum = gops[newIndex].value;
+    gops[newIndex].value = trackz - distanceTo(gops, newIndex);
+    gops.splice(newIndex + 1, 0, new GaussOp('lens', 3000, 1, 'blue'));
+    gops.splice(newIndex + 2, 0, new GaussOp('distance', dsum - gops[newIndex].value));
 }
 

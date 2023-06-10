@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Text, interactivity } from '@threlte/extras';
+	import { Text, interactivity, TransformControls, OrbitControls } from '@threlte/extras';
 	import { T } from '@threlte/core';
 	import { BufferGeometry, DoubleSide, LineDashedMaterial, Object3D, Vector3 } from 'three';
 	import { Line2 } from 'three/examples/jsm/lines/Line2';
@@ -18,10 +18,11 @@
 	import { genLineSegment, setAxisLimits, toGrid, genGridLines2, toWorld } from '$lib/mathUtils';
 	import Source from '$lib/source';
 	import GaussOp from '$lib/gaussop';
-	import { combineAdjacentDistances, distanceTo, findIndex } from '$lib/gaussop';
+	import { combineAdjacentDistances, distanceTo, findIndex, addLens } from '$lib/gaussop';
 	import { getMeshIndex, getCtrlKeyInfo, centerLine } from '$lib/meshUtils';
 	import LensModModal from './LensModModal.svelte';
 	import { modalStore, type ModalComponent, type ModalSettings } from '@skeletonlabs/skeleton';
+	import HelpModal from './HelpModal.svelte';
 
 	export let gpin: GaussOp[] = [];
 	export let source: Source = new Source(1.07, 1, 0, 3);
@@ -91,7 +92,7 @@
 				//gpin[newIndex].tag = false;
 				lineColor = 0x0000ff;
 			} else {
-				console.log(newIndex);
+				//console.log(newIndex);
 				//gpin[newIndex].tag = true;
 				gpDistIndex = newIndex;
 				lineColor = 0xff0000;
@@ -99,6 +100,7 @@
 		}
 	}
 
+	// add lens
 	function onDoubleClickLine(e: MouseEvent) {
 		if (getCtrlKeyInfo(e, 'ctrlKey')) return;
 		if (gpLensIndex > -1) {
@@ -109,12 +111,8 @@
 		if (keys.includes('pointOnLine')) {
 			const point = e['pointOnLine' as keyof MouseEvent] as unknown as Vector3;
 			const trackz = toWorld(point.z, zScale);
-			const newIndex = findIndex(gpin, trackz);
-			const dsum = gpin[newIndex].value;
-			gpin[newIndex].value = trackz - distanceTo(gpin, newIndex);
-			gpin.splice(newIndex + 1, 0, new GaussOp('lens', 3000, 1, 'blue'));
-			gpin.splice(newIndex + 2, 0, new GaussOp('distance', dsum - gpin[newIndex].value));
-			console.log('double click line', trackz, newIndex);
+			addLens(gpin, trackz);
+			upDateCanvas();
 		}
 	}
 
@@ -157,47 +155,31 @@
 				}
 				//console.log('final index', index, typeof index);
 			} else {
-				const modal: ModalSettings = {
-					type: 'confirm',
-					// Data
-					title: 'Please Confirm - Delete Lens?',
-					body: 'Are you sure you wish to delete lens?',
-					// TRUE if confirm pressed, FALSE if cancel pressed
-					response: (r: boolean) => {
-						console.log('response:', r);
-						if (r) {
-							gpin.splice(index, 1);
-							gpLensIndex = -1;
-							gpDistIndex = -1;
-							upDateCanvas();
-							console.log(gpin);
-							gpin = combineAdjacentDistances(gpin);
-							console.log(gpin);
-						}
-					}
-				};
-				modalStore.trigger(modal);
+				deleteLens(gpin, index);
+				combineAdjacentDistances(gpin);
+				upDateCanvas();
 			}
 		}
 	}
 
+	// modify lens properties
 	function onDoubleClickLens(e: MouseEvent): void {
 		const index = getMeshIndex(e, 'Lens');
 		const c: ModalComponent = { ref: LensModModal };
 		const modal: ModalSettings = {
 			type: 'component',
 			component: c,
-			title: 'Custom Form Component',
-			body: 'Complete the form below and then press submit.',
+			title: 'Modify Lens Properties',
+			body: 'Modify lens then either accept or cancel.',
 			value: ['gopefl', gpin[index].value.toString(), 'gopcolor', gpin[index].color],
 			response: (r: any) => {
 				if (r) {
-					console.log('response', r, typeof r);
+					//console.log('response', r, typeof r);
 					const efl = r.efl;
 					gpin[index].value = parseFloat(r.efl);
 					gpin[index].color = r.color;
 				} else {
-					console.log('no response');
+					//console.log('cancel response');
 				}
 			}
 		};
@@ -213,16 +195,38 @@
 	function onLensLeave(e: MouseEvent) {
 		const index = getMeshIndex(e, 'Lens');
 		gpin[index].tag = false;
-		console.log('line enter', index, lensMap[index]);
+		//console.log('line enter', index, lensMap[index]);
 	}
 
 	// *****************************************************************
 
 	function onKeyDown(e: KeyboardEvent) {
-		if (gpDistIndex === -1 && gpLensIndex === -1) {
-			// quick exit - nothing selected
-			return;
+		// recombine adjacent distance ops
+		if (e.ctrlKey && (e.key === 'c' || e.key === 'C')) {
+			combineAdjacentDistances(gpin);
+			upDateCanvas();
+			const modal: ModalSettings = {
+				type: 'alert',
+				title: 'Recombination Complete',
+				body: 'Eliminated adjacent distances if needed.'
+			};
+			modalStore.trigger(modal);
 		}
+
+		// Add lens op to end of system
+		if (e.ctrlKey && (e.key === 'L' || e.key === 'l')) {
+			gpin.push(new GaussOp('lens', 100, 1, 'orangered', false));
+			console.log('add lens');
+			upDateCanvas();
+		}
+
+		// Add distance op to end of system
+		if (e.ctrlKey && (e.key === 'D' || e.key === 'd')) {
+			gpin.push(new GaussOp('distance', 100, 1, 'blue', false));
+			upDateCanvas();
+		}
+
+		// here is user has selected a distance - incrementally changes distance
 		if (gpDistIndex >= 0 && gpDistIndex < gpin.length) {
 			switch (e.key) {
 				case 'a':
@@ -241,6 +245,7 @@
 					break;
 			}
 		}
+		// here if user selected lens - incrementally changes efl
 		if (gpLensIndex >= 0 && gpLensIndex < gpin.length) {
 			switch (e.key) {
 				case 'a':
@@ -259,12 +264,59 @@
 					break;
 			}
 		}
+
+		// here for resetting system
+		if (e.ctrlKey && e.altKey && (e.key === 'r' || e.key === 'R')) {
+			const modal: ModalSettings = {
+				type: 'confirm',
+				title: 'Please Confirm - Reset System?',
+				body: 'Are you sure you wish to reset system?',
+				response: (r: boolean) => {
+					if (r) {
+						gpin = [];
+						gpin.push(new GaussOp('distance', 100, 1, 'blue', false));
+						upDateCanvas();
+					}
+				}
+			};
+			modalStore.trigger(modal);
+		}
 	}
 
 	// *****************************************************************
 
-	function deleteLens(gops: GaussOp, index: number): GaussOp[] {
-		return gops;
+	function deleteLens(gops: GaussOp[], index: number): void {
+		const modal: ModalSettings = {
+			type: 'confirm',
+			// Data
+			title: 'Please Confirm - Delete Lens?',
+			body: 'Are you sure you wish to delete lens?',
+			// TRUE if confirm pressed, FALSE if cancel pressed
+			response: (r: boolean) => {
+				console.log('response:', r);
+				if (r) {
+					gops.splice(index, 1);
+					gpLensIndex = -1;
+					gpDistIndex = -1;
+				}
+			}
+		};
+		modalStore.trigger(modal);
+	}
+
+	function showHelp() {
+		const index = 1;
+		const c: ModalComponent = { ref: HelpModal };
+		const modal: ModalSettings = {
+			type: 'component',
+			component: c,
+			title: 'Help Keys & Functions',
+			body: 'Help keys and functions',
+			response: (r: any) => {
+				console.log('help responded');
+			}
+		};
+		modalStore.trigger(modal);
 	}
 
 	// *****************************************************************
@@ -307,6 +359,10 @@
 		scaleY,
 		zScale
 	);
+
+	function prtposi(e: any) {
+		console.log(typeof e);
+	}
 </script>
 
 <svelte:window on:keydown|preventDefault={onKeyDown} />
@@ -521,6 +577,23 @@
 <T.Mesh position={[100, gridHeight, -gridWidth]} rotation.y={-Math.PI / 2} visible={true}>
 	<Text text={titletext} color={'black'} fontSize={12} anchorX={'left'} anchorY={'bottom'} />
 </T.Mesh>
+
+<!-- Help Button -->
+<T.Group position={[0, gridHeight, gridWidth + 30]}>
+	<T.Mesh rotation.z={Math.PI / 2} visible={true} on:click={showHelp}>
+		<T.CylinderGeometry args={[6, 6, 5, 32]} />
+		<T.MeshStandardMaterial color={'red'} />
+	</T.Mesh>
+	<Text
+		position={[-2.6, 0, 0]}
+		rotation.y={-Math.PI / 2}
+		text={'?'}
+		color={'black'}
+		fontSize={8}
+		anchorX={'center'}
+		anchorY={'middle'}
+	/>
+</T.Group>
 
 <!-- plus & negative waist profile lines -->
 <!--
