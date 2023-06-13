@@ -19,10 +19,10 @@
 	import Source from '$lib/source';
 	import GaussOp from '$lib/gaussop';
 	import { combineAdjacentDistances, distanceTo, findIndex, addLens } from '$lib/gaussop';
-	import { getMeshIndex, getCtrlKeyInfo, centerLine } from '$lib/meshUtils';
-	import LensModModal from './LensModModal.svelte';
+	import { getMeshIndex, getExtraKeyInfo, centerLine } from '$lib/meshUtils';
 	import { modalStore, type ModalComponent, type ModalSettings } from '@skeletonlabs/skeleton';
 	import HelpModal from './HelpModal.svelte';
+	import ModifyOpModal from './ModifyOpModal.svelte';
 
 	export let gpin: GaussOp[] = [];
 	export let source: Source = new Source(1.07, 1, 0, 3);
@@ -80,12 +80,39 @@
 	// *****************************************************************
 
 	function onclickLine(e: MouseEvent) {
-		//		if (getCtrlKeyInfo(e, 'ctrlKey')) return;
+		const isCtrlKeyPressed = getExtraKeyInfo(e, 'ctrlKey');
+		const isAltKeyPressed = getExtraKeyInfo(e, 'altKey');
 		let newIndex = getMeshIndex(e, 'Line');
+		// check for activated lens and deactivate
 		if (gpLensIndex > -1) {
 			gpin[gpLensIndex].color = backupcolor;
 			gpLensIndex = -1;
 		}
+
+		// CtrlClick Line - use modal to change line properties
+		if (isCtrlKeyPressed && newIndex > -1) {
+			changeOpModal(e, 'Line', 'Distance');
+			return;
+		}
+
+		// AltClick Line - add lens at current pointer loc
+		if (isAltKeyPressed && newIndex > -1) {
+			console.log('AltClick Line');
+			if (gpLensIndex > -1) {
+				gpin[gpLensIndex].color = backupcolor;
+				gpLensIndex = -1;
+			}
+			const keys = Object.keys(e);
+			if (keys.includes('pointOnLine')) {
+				const point = e['pointOnLine' as keyof MouseEvent] as unknown as Vector3;
+				const trackz = toWorld(point.z, zScale);
+				addLens(gpin, trackz);
+				upDateCanvas();
+			}
+			return;
+		}
+
+		// Click Line - activate line for user mod if keyboard
 		if (newIndex > -1) {
 			if (newIndex === gpDistIndex) {
 				gpDistIndex = -1;
@@ -97,22 +124,6 @@
 				gpDistIndex = newIndex;
 				lineColor = 0xff0000;
 			}
-		}
-	}
-
-	// add lens
-	function onDoubleClickLine(e: MouseEvent) {
-		if (getCtrlKeyInfo(e, 'ctrlKey')) return;
-		if (gpLensIndex > -1) {
-			gpin[gpLensIndex].color = backupcolor;
-			gpLensIndex = -1;
-		}
-		const keys = Object.keys(e);
-		if (keys.includes('pointOnLine')) {
-			const point = e['pointOnLine' as keyof MouseEvent] as unknown as Vector3;
-			const trackz = toWorld(point.z, zScale);
-			addLens(gpin, trackz);
-			upDateCanvas();
 		}
 	}
 
@@ -131,59 +142,41 @@
 	// *****************************************************************
 
 	function onClickLens(e: MouseEvent) {
-		const isCtrlKeyPressed = getCtrlKeyInfo(e, 'ctrlKey');
+		const isCtrlKeyPressed = getExtraKeyInfo(e, 'ctrlKey');
+		const isAltKeyPressed = getExtraKeyInfo(e, 'altKey');
 		const index = getMeshIndex(e, 'Lens');
-		if (index > -1) {
-			if (!isCtrlKeyPressed) {
-				lineColor = 0x0000ff;
-				// this happens if another lens is clicked
-				// when one is already active
-				if (index > 0 && gpLensIndex > 0) {
-					gpin[gpLensIndex].color = backupcolor;
-				}
-				// now swap colors for activated lens or
-				// deactivate lens and reset colors
-				if (index === gpLensIndex) {
-					gpin[index].color = backupcolor;
-					gpLensIndex = -1;
-					gpDistIndex = -1;
-				} else {
-					gpLensIndex = index;
-					gpDistIndex = -1;
-					backupcolor = gpin[index].color;
-					gpin[index].color = 'white';
-				}
-				//console.log('final index', index, typeof index);
+		// here for activating lens for keyboard changes
+		if (index > -1 && !isAltKeyPressed && !isCtrlKeyPressed) {
+			lineColor = 0x0000ff;
+			// this happens if another lens is clicked
+			// when one is already active
+			if (index > 0 && gpLensIndex > 0) {
+				gpin[gpLensIndex].color = backupcolor;
+			}
+			// now swap colors for activated lens or
+			// deactivate lens and reset colors
+			if (index === gpLensIndex) {
+				gpin[index].color = backupcolor;
+				gpLensIndex = -1;
+				gpDistIndex = -1;
 			} else {
-				deleteLens(gpin, index);
-				combineAdjacentDistances(gpin);
-				upDateCanvas();
+				gpLensIndex = index;
+				gpDistIndex = -1;
+				backupcolor = gpin[index].color;
+				gpin[index].color = 'white';
 			}
 		}
-	}
+		// here for deleting lens
+		if (index > -1 && !isAltKeyPressed && isCtrlKeyPressed) {
+			changeOpModal(e, 'Lens', 'EFL');
+			upDateCanvas();
+		}
 
-	// modify lens properties
-	function onDoubleClickLens(e: MouseEvent): void {
-		const index = getMeshIndex(e, 'Lens');
-		const c: ModalComponent = { ref: LensModModal };
-		const modal: ModalSettings = {
-			type: 'component',
-			component: c,
-			title: 'Modify Lens Properties',
-			body: 'Modify lens then either accept or cancel.',
-			value: ['gopefl', gpin[index].value.toString(), 'gopcolor', gpin[index].color],
-			response: (r: any) => {
-				if (r) {
-					//console.log('response', r, typeof r);
-					const efl = r.efl;
-					gpin[index].value = parseFloat(r.efl);
-					gpin[index].color = r.color;
-				} else {
-					//console.log('cancel response');
-				}
-			}
-		};
-		modalStore.trigger(modal);
+		if (index > -1 && isAltKeyPressed && !isCtrlKeyPressed) {
+			deleteLens(gpin, index);
+			combineAdjacentDistances(gpin);
+			upDateCanvas();
+		}
 	}
 
 	function onLensEnter(e: MouseEvent) {
@@ -226,7 +219,7 @@
 			upDateCanvas();
 		}
 
-		// here is user has selected a distance - incrementally changes distance
+		// here if user has selected a distance - incrementally changes distance
 		if (gpDistIndex >= 0 && gpDistIndex < gpin.length) {
 			switch (e.key) {
 				case 'a':
@@ -319,6 +312,35 @@
 		modalStore.trigger(modal);
 	}
 
+	function changeOpModal(e: MouseEvent, type: string, valueName: string) {
+		const index = getMeshIndex(e, type);
+		const c: ModalComponent = { ref: ModifyOpModal };
+		const modal: ModalSettings = {
+			type: 'component',
+			component: c,
+			title: 'Modify ' + type + ' Properties',
+			body: 'Modify ' + type + ' then either accept or cancel.',
+			value: [
+				'gopefl',
+				gpin[index].value.toString(),
+				'gopcolor',
+				gpin[index].color,
+				'valueName',
+				valueName
+			],
+			response: (r: any) => {
+				if (r) {
+					//console.log('response', r, typeof r);
+					gpin[index].value = parseFloat(r.value);
+					gpin[index].color = r.color;
+				} else {
+					//console.log('cancel response');
+				}
+			}
+		};
+		modalStore.trigger(modal);
+	}
+
 	// *****************************************************************
 
 	// update canvas scaling factors and other parameters
@@ -385,7 +407,6 @@
 				on:pointerenter={onLineEnter}
 				on:pointerleave={onLineLeave}
 				on:click={onclickLine}
-				on:dblclick={onDoubleClickLine}
 			/>
 			<T
 				is={Line2}
@@ -425,7 +446,6 @@
 			on:pointerenter={onLensEnter}
 			on:pointerleave={onLensLeave}
 			on:click={onClickLens}
-			on:dblclick={onDoubleClickLens}
 			let:ref
 		>
 			<T.MeshPhongMaterial
@@ -439,7 +459,7 @@
 		{#if gpin[lensMap[index]].tag}
 			<T.Mesh position={eflLabelPosi[index]} rotation.y={-Math.PI / 2}>
 				<Text
-					text={'f=' + ' = ' + gop[index].value.toFixed(0) + ' mm'}
+					text={'f=' + gop[index].value.toFixed(0) + ' mm'}
 					color={0x000000}
 					fontSize={8}
 					anchorX={'center'}

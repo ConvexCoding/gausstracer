@@ -13,7 +13,7 @@ export function getMeshIndex(e: MouseEvent, type: string) {
   return -1;
 }
 
-export function getCtrlKeyInfo(e: MouseEvent, type: string) {
+export function getExtraKeyInfo(e: MouseEvent, type: string) {
   if (Object.keys(e).includes('nativeEvent')) {
     const objInfo = e['nativeEvent' as keyof MouseEvent] as unknown as Object3D;
     const isKey = objInfo[type as keyof Object3D] as boolean;

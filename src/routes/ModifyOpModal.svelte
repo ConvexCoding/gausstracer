@@ -6,16 +6,17 @@
 	const colorKeywordNames = Object.keys(colorKeywords);
 
 	export let parent: any;
-	let focal = $modalStore[0].value[1];
-	let lenscolor = $modalStore[0].value[3];
+	let value = $modalStore[0].value[1];
+	let linecolor = $modalStore[0].value[3];
+	let opType = $modalStore[0].value[5];
 
-	function updateEFL() {
-		lensData.efl = focal.toString();
+	function updateValue() {
+		opData.value = value.toString();
 	}
 
-	$: lensData = {
-		color: lenscolor,
-		efl: focal
+	$: opData = {
+		color: linecolor,
+		value: value
 	};
 
 	function changeColor(e: Event) {
@@ -23,17 +24,17 @@
 			const target = e.target as HTMLSelectElement;
 			const selectedValue = target.value;
 			console.log('Selected value:', selectedValue);
-			lensData.color = selectedValue;
+			opData.color = selectedValue;
 		}
 	}
 
 	// We've created a custom submit function to pass the response and close the modal.
 	function onFormSubmit(): void {
-		if ($modalStore[0].response) $modalStore[0].response(lensData);
+		if ($modalStore[0].response) $modalStore[0].response(opData);
 		modalStore.close();
 	}
 
-	function fillEFL(e: KeyboardEvent) {
+	function fillValue(e: KeyboardEvent) {
 		// first check for tab or shift tab
 		if (e.key === 'Tab') {
 			console.log('tab key press: ', e.key);
@@ -42,13 +43,13 @@
 			return;
 		}
 		if (e.key === 'Backspace') {
-			if (lensData.efl.length > 0) {
-				lensData.efl = lensData.efl.slice(0, -1);
+			if (opData.value.length > 0) {
+				opData.value = opData.value.slice(0, -1);
 			}
 		} else {
 			const allowedKeys = /^[-\d.]$/;
 			if (allowedKeys.test(e.key)) {
-				lensData.efl += e.key;
+				opData.value += e.key;
 			} else {
 				e.preventDefault();
 			}
@@ -81,34 +82,34 @@
 		<header class={cHeader}>{$modalStore[0].title ?? '(title missing)'}</header>
 		<!-- Enable for debugging: -->
 		<form class="modal-form {cForm}">
-			<label class="label">
-				<span>EFL</span>
+			<label class="Distance-label">
+				<span>{opType}</span>
 				<input
-					id="efl"
+					id="value"
 					tabindex="0"
 					class="input pl-3"
-					type="efl"
-					bind:value={lensData.efl}
-					placeholder="Lens EFL"
-					on:keydown={fillEFL}
+					type="value"
+					bind:value={opData.value}
+					placeholder="op value"
+					on:keydown={fillValue}
 				/>
 			</label>
 			<RangeSlider
 				name="waist-slider"
 				accent="accent-surface-900 dark:accent-surface-300  mb-5"
-				bind:value={focal}
-				min={5}
-				max={300}
-				step={5}
+				bind:value
+				min={25}
+				max={1000}
+				step={25}
 				tabindex="0"
-				on:change={updateEFL}
+				on:change={updateValue}
 			>
 				<div class="flex justify-between items-center">
-					<div class="text-lg">EFL</div>
-					<div class="text-lg">{lensData.efl} / {300}</div>
+					<div class="text-lg">{opType}</div>
+					<div class="text-lg">{opData.value} / {1000}</div>
 				</div>
 			</RangeSlider>
-			<label for="dog-names">Lens Color:</label>
+			<label for="LensColor-label">Lens Color:</label>
 			<select
 				name="lens-colors"
 				id="lens-colors"
@@ -117,7 +118,7 @@
 				on:keydown={moveFocusfromColor}
 			>
 				{#each colorKeywordNames as color}
-					{#if color === lenscolor}
+					{#if color === linecolor}
 						<option value={color} selected>{color}</option>
 					{:else}
 						<option value={color}>{color}</option>

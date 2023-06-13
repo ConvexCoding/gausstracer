@@ -29,16 +29,19 @@
 			class="border border-surface-500 p-4 rounded-container-token grid grid-cols-3 gap-x-10 gap-y-2"
 		>
 			<div class="col-span-2">Change distance or efl using arrow keys</div>
-			<div><i>Click</i></div>
+			<div><i>Click Lens/Line</i></div>
 
-			<div class="col-span-2">Change lens efl and color</div>
-			<div><i>Double Click (Lens)</i></div>
+			<div class="col-span-2">Modify Lens Props</div>
+			<div><i>Ctrl Click Lens</i></div>
+
+			<div class="col-span-2">Modify Line Props</div>
+			<div><i>Ctrl Click Line</i></div>
+
+			<div class="col-span-2">Delete Lens</div>
+			<div><i>Alt Click Lens</i></div>
 
 			<div class="col-span-2">Add lens at cursor location</div>
-			<div><i>Double Click (Line)</i></div>
-
-			<div class="col-span-2">Delete lens</div>
-			<div><i>Ctrl Click (Lens)</i></div>
+			<div><i>Alt Click Line</i></div>
 
 			<div class="col-span-2">Display lens efl or distance settings</div>
 			<div><i>Hover Over Lens/Dist</i></div>
