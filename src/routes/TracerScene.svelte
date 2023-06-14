@@ -75,6 +75,7 @@
 
 	let gpDistIndex = -1; // if user presses number key change the gp index
 	let gpLensIndex = -1;
+	let gpDragIndex = -1;
 	let backupcolor = 'white';
 
 	// *****************************************************************
@@ -194,6 +195,14 @@
 	// *****************************************************************
 
 	function onKeyDown(e: KeyboardEvent) {
+		// escape key to reset activated elements
+		if (e.key === 'Escape') {
+			if (gpDragIndex > -1) {
+				gpin[gpDragIndex].color = backupcolor;
+				gpDragIndex = -1;
+			}
+		}
+
 		// recombine adjacent distance ops
 		if (e.ctrlKey && (e.key === 'c' || e.key === 'C')) {
 			combineAdjacentDistances(gpin);
@@ -224,13 +233,13 @@
 			switch (e.key) {
 				case 'a':
 				case 'ArrowLeft':
-					gpin[gpDistIndex].value -= 10;
+					gpin[gpDistIndex].value -= 5;
 					upDateCanvas();
 					break;
 
 				case 'd':
 				case 'ArrowRight':
-					gpin[gpDistIndex].value += 10;
+					gpin[gpDistIndex].value += 5;
 					upDateCanvas();
 					break;
 
@@ -303,8 +312,8 @@
 		const modal: ModalSettings = {
 			type: 'component',
 			component: c,
-			title: 'Help Keys & Functions',
-			body: 'Help keys and functions',
+			title: 'Help - Keys & Functions',
+			body: 'Help - keys and functions',
 			response: (r: any) => {
 				console.log('help responded');
 			}
@@ -382,15 +391,97 @@
 		zScale
 	);
 
-	function prtposi(e: any) {
-		console.log(typeof e);
+	let cylSize = 10;
+
+	function changesize(e: WheelEvent, t: string) {
+		//console.log(t);
+		const objInfo = e['nativeEvent' as keyof MouseEvent] as unknown as Object3D;
+		//console.log(e);
+		//console.log(objInfo);
+		const delta = objInfo['deltaY' as keyof Object] as unknown as number;
+		if (delta < 0) {
+			cylSize += 1;
+		} else {
+			cylSize -= 1;
+		}
+		console.log('delta', delta);
+	}
+
+	function changeElement(e: WheelEvent, type: string, incr: number) {
+		const objInfo = e['nativeEvent' as keyof MouseEvent] as unknown as Object3D;
+		const delta = objInfo['deltaY' as keyof Object] as unknown as number;
+		const elnumber = getMeshIndex(e, type);
+		if (delta < 0) {
+			gpin[elnumber].value += incr;
+		} else {
+			gpin[elnumber].value -= incr;
+		}
+	}
+
+	function canvasWheel(e: WheelEvent) {
+		const objInfo = e['nativeEvent' as keyof MouseEvent] as unknown as Object3D;
+		const delta = objInfo['deltaY' as keyof Object] as unknown as number;
+		if (gpLensIndex >= 0 && gpLensIndex < gpin.length) {
+			if (delta < 0) {
+				gpin[gpLensIndex].value += 1;
+			} else {
+				gpin[gpLensIndex].value -= 1;
+			}
+		}
+		if (gpDistIndex >= 0 && gpDistIndex < gpin.length) {
+			if (delta < 0) {
+				gpin[gpDistIndex].value += 5;
+			} else {
+				gpin[gpDistIndex].value -= 5;
+			}
+		}
+	}
+
+	let dragInitialPosition = 0;
+	let dragcolor = 'lightblue';
+	function onDblClickLens(e: MouseEvent) {
+		const isCtrlKeyPressed = getExtraKeyInfo(e, 'ctrlKey');
+		const isAltKeyPressed = getExtraKeyInfo(e, 'altKey');
+		if (gpDragIndex < 0 && getMeshIndex(e, 'Lens') > 0) {
+			gpDragIndex = getMeshIndex(e, 'Lens');
+			dragcolor = gpin[gpDragIndex].color;
+			gpin[gpDragIndex].color = 'lightblue';
+			upDateCanvas();
+			dragInitialPosition = 0;
+			for (let i = 0; i < gpDragIndex - 1; i++) {
+				if (gpin[i].type === 'distance') {
+					dragInitialPosition += gpin[i].value;
+				}
+			}
+			console.log(gpDragIndex, dragcolor);
+		} else {
+			console.log('second double click on lens', dragcolor);
+			gpin[gpDragIndex].color = dragcolor;
+			gpDragIndex = -1;
+			dragInitialPosition = 0;
+			upDateCanvas();
+		}
+	}
+
+	function canvasMove(e: WheelEvent) {
+		const point = e['point' as keyof MouseEvent] as unknown as Vector3;
+		const zloc = toWorld(point.z, zScale);
+		if (gpDragIndex >= 0 && gpDragIndex < gpin.length) {
+			gpin[gpDragIndex - 1].value = zloc - dragInitialPosition;
+			upDateCanvas();
+		}
 	}
 </script>
 
 <svelte:window on:keydown|preventDefault={onKeyDown} />
 
+<T.Mesh on:wheel={(e) => changesize(e, 'hello')}>
+	<T.CylinderGeometry args={[cylSize, cylSize, 10, 32]} />
+	<T.MeshStandardMaterial color={'purple'} />
+</T.Mesh>
+
 <!-- Add Camera and Lights-->
-<LightsCamera scale={0.6} />
+<LightsCamera scale={0.6} zoomOn={false} />
 
 <!-- plus & negative waist profile lines -->
 {#if showSegLines}
@@ -407,6 +498,7 @@
 				on:pointerenter={onLineEnter}
 				on:pointerleave={onLineLeave}
 				on:click={onclickLine}
+				on:wheel={(e) => changeElement(e, 'Line', 5)}
 			/>
 			<T
 				is={Line2}
@@ -419,6 +511,7 @@
 				on:pointerenter={onLineEnter}
 				on:pointerleave={onLineLeave}
 				on:click={onclickLine}
+				on:wheel={(e) => changeElement(e, 'Line', 5)}
 			/>
 		</T.Mesh>
 		{#if gpin[distanceMap[index]].tag}
@@ -446,6 +539,8 @@
 			on:pointerenter={onLensEnter}
 			on:pointerleave={onLensLeave}
 			on:click={onClickLens}
+			on:dblclick={onDblClickLens}
+			on:wheel={(e) => changeElement(e, 'Lens', 1)}
 			let:ref
 		>
 			<T.MeshPhongMaterial
@@ -513,7 +608,13 @@
 {/if}
 
 <!-- background plane - in this case along Y-Z aaxis -->
-<T.Mesh position={[100 + offsetbackground, 0, 0]} rotation={[0, 0, 0]} visible={true}>
+<T.Mesh
+	position={[100 + offsetbackground, 0, 0]}
+	rotation={[0, 0, 0]}
+	visible={true}
+	on:wheel={(e) => canvasWheel(e)}
+	on:pointermove={(e) => canvasMove(e)}
+>
 	<T.BoxGeometry args={[1, 2 * gridHeight + 50, 2 * gridWidth + 100]} />
 	<T.MeshStandardMaterial side={DoubleSide} color={'white'} transparent opacity={1} />
 </T.Mesh>

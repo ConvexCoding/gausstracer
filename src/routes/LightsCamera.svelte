@@ -3,8 +3,7 @@
 	import { T } from '@threlte/core';
 
 	export let scale = 0.75;
-
-	const zoomOn = true;
+	export const zoomOn = false;
 	const rotateOn = true;
 	const panOn = true;
 </script>
