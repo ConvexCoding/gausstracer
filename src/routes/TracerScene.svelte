@@ -461,7 +461,8 @@
 	}
 </script>
 
-<svelte:window on:keyDown(keyDown) />
+<svelte:window on:keydown={onKeyDown} />
+
 <!-- Add Camera and Lights-->
 <LightsCamera scale={0.6} zoomOn={false} />
 
