@@ -7,9 +7,17 @@
 	let msq = $modalStore[0].value[5].toString();
 	let ior = $modalStore[0].value[7].toString();
 
+	$: resp = {
+		lambda: lambda,
+		waist: waist,
+		msq: msq,
+		ior: ior
+	};
+
+	// We've created a custom submit function to pass the response and close the modal.
 	// We've created a custom submit function to pass the response and close the modal.
 	function onFormSubmit(): void {
-		if ($modalStore[0].response) $modalStore[0].response(0);
+		if ($modalStore[0].response) $modalStore[0].response(resp);
 		modalStore.close();
 	}
 
@@ -33,7 +41,7 @@
 					tabindex="0"
 					class="input pl-3"
 					type="value"
-					bind:value={lambda}
+					bind:value={resp.lambda}
 					placeholder="lambda"
 				/>
 			</label>
@@ -44,7 +52,7 @@
 					tabindex="0"
 					class="input pl-3"
 					type="value"
-					bind:value={waist}
+					bind:value={resp.waist}
 					placeholder="waist"
 				/>
 			</label>
@@ -55,7 +63,7 @@
 					tabindex="0"
 					class="input pl-3"
 					type="value"
-					bind:value={msq}
+					bind:value={resp.msq}
 					placeholder="msq"
 				/>
 			</label>
@@ -66,7 +74,7 @@
 					tabindex="0"
 					class="input pl-3"
 					type="value"
-					bind:value={ior}
+					bind:value={resp.ior}
 					placeholder="ior"
 				/>
 			</label>
