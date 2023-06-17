@@ -5,8 +5,14 @@
 	import TracerScene from './TracerScene.svelte';
 	import GaussOp from '$lib/gaussop';
 	import Source from '$lib/source';
-	import { RangeSlider } from '@skeletonlabs/skeleton';
+	import {
+		RangeSlider,
+		type ModalComponent,
+		type ModalSettings,
+		modalStore
+	} from '@skeletonlabs/skeleton';
 	import { interactivity } from '@threlte/extras';
+	import SourceModal from './SourceModal.svelte';
 
 	// define Gaussian beam operations
 	const sf = 1;
@@ -49,6 +55,21 @@
 	}
 
 	let arrow = 'Source Control --- ^';
+
+	function showModal() {
+		const c: ModalComponent = { ref: SourceModal };
+		const modal: ModalSettings = {
+			type: 'component',
+			component: c,
+			title: 'Modify ' + 'Source' + ' Properties',
+			body: 'Modify ' + 'Source' + ' then either accept or cancel.',
+			value: ['wavelength', λ.toString(), 'w0', w0, 'msq', msq, 'ior', ior],
+			response: (r: any) => {
+				console.log('response');
+			}
+		};
+		modalStore.trigger(modal);
+	}
 </script>
 
 <div class="ml-5 mb-5">
@@ -67,7 +88,7 @@
 	<button
 		class="mb-5 text-white bg-blue-600 hover:bg-blue-800 focus:ring-4 focus:ring-blue-100 font-medium rounded-lg text-sm px-4 py-2.5 text-center inline-flex items-center"
 		type="button"
-		on:click={ShowAndHide}
+		on:click={showModal}
 		>Source Control <svg
 			class="w-4 h-4 ml-2"
 			fill="none"

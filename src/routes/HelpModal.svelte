@@ -28,7 +28,13 @@
 		<div
 			class="border border-surface-500 p-4 rounded-container-token grid grid-cols-3 gap-x-10 gap-y-2"
 		>
+			<div class="col-span-2">Change efl by dragging lens with mouse</div>
+			<div><i>Double Click Lens</i></div>
+
 			<div class="col-span-2">Change distance or efl using arrow keys</div>
+			<div><i>Click Lens/Line</i></div>
+
+			<div class="col-span-2">Change distance or efl using mouse wheel</div>
 			<div><i>Click Lens/Line</i></div>
 
 			<div class="col-span-2">Modify Lens Props</div>

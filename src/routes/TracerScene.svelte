@@ -391,22 +391,6 @@
 		zScale
 	);
 
-	let cylSize = 10;
-
-	function changesize(e: WheelEvent, t: string) {
-		//console.log(t);
-		const objInfo = e['nativeEvent' as keyof MouseEvent] as unknown as Object3D;
-		//console.log(e);
-		//console.log(objInfo);
-		const delta = objInfo['deltaY' as keyof Object] as unknown as number;
-		if (delta < 0) {
-			cylSize += 1;
-		} else {
-			cylSize -= 1;
-		}
-		console.log('delta', delta);
-	}
-
 	function changeElement(e: WheelEvent, type: string, incr: number) {
 		const objInfo = e['nativeEvent' as keyof MouseEvent] as unknown as Object3D;
 		const delta = objInfo['deltaY' as keyof Object] as unknown as number;
@@ -435,6 +419,7 @@
 				gpin[gpDistIndex].value -= 5;
 			}
 		}
+		upDateCanvas();
 	}
 
 	let dragInitialPosition = 0;
@@ -472,13 +457,6 @@
 		}
 	}
 </script>
-
-<svelte:window on:keydown|preventDefault={onKeyDown} />
-
-<T.Mesh on:wheel={(e) => changesize(e, 'hello')}>
-	<T.CylinderGeometry args={[cylSize, cylSize, 10, 32]} />
-	<T.MeshStandardMaterial color={'purple'} />
-</T.Mesh>
 
 <!-- Add Camera and Lights-->
 <LightsCamera scale={0.6} zoomOn={false} />
