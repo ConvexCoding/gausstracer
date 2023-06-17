@@ -34,28 +34,6 @@
 		modalStore.close();
 	}
 
-	function fillValue(e: KeyboardEvent) {
-		// first check for tab or shift tab
-		if (e.key === 'Tab') {
-			console.log('tab key press: ', e.key);
-			const gotoColors = document.getElementById('lens-colors') as HTMLInputElement;
-			gotoColors.focus();
-			return;
-		}
-		if (e.key === 'Backspace') {
-			if (opData.value.length > 0) {
-				opData.value = opData.value.slice(0, -1);
-			}
-		} else {
-			const allowedKeys = /^[-\d.]$/;
-			if (allowedKeys.test(e.key)) {
-				opData.value += e.key;
-			} else {
-				e.preventDefault();
-			}
-		}
-	}
-
 	function moveFocusfromColor(e: KeyboardEvent) {
 		if (e.shiftKey && e.key === 'Tab') {
 			console.log('shift tab key press: ', e.shiftKey, e.key);
@@ -91,7 +69,6 @@
 					type="value"
 					bind:value={opData.value}
 					placeholder="op value"
-					on:keydown={fillValue}
 				/>
 			</label>
 			<RangeSlider

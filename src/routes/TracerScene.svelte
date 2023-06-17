@@ -195,6 +195,9 @@
 	// *****************************************************************
 
 	function onKeyDown(e: KeyboardEvent) {
+		if ($modalStore[0]) return;
+		e.preventDefault();
+
 		// escape key to reset activated elements
 		if (e.key === 'Escape') {
 			if (gpDragIndex > -1) {
@@ -458,6 +461,7 @@
 	}
 </script>
 
+<svelte:window on:keyDown(keyDown) />
 <!-- Add Camera and Lights-->
 <LightsCamera scale={0.6} zoomOn={false} />
 

@@ -13,22 +13,6 @@
 		modalStore.close();
 	}
 
-	function fillValue(e: KeyboardEvent, value: string) {
-		if (e.key === 'Backspace') {
-			if (ior.length > 0) {
-				ior = value.slice(0, -1);
-			}
-		} else {
-			const allowedKeys = /^[-\d.]$/;
-			if (allowedKeys.test(e.key)) {
-				console.log('keydown: ', e.key);
-				ior += e.key;
-			} else {
-				e.preventDefault();
-			}
-		}
-	}
-
 	// Base Classes
 	const cBase = 'card p-4 shadow-xl space-y-4';
 	const cHeader = 'font-bold text-lg';
@@ -62,7 +46,6 @@
 					type="value"
 					bind:value={waist}
 					placeholder="waist"
-					on:keydown={(e) => fillValue(e, waist)}
 				/>
 			</label>
 			<label class="Msq-label">
@@ -74,7 +57,6 @@
 					type="value"
 					bind:value={msq}
 					placeholder="msq"
-					on:keydown={(e) => fillValue(e, msq)}
 				/>
 			</label>
 			<label class="Index-label">
@@ -86,7 +68,6 @@
 					type="value"
 					bind:value={ior}
 					placeholder="ior"
-					on:keydown={(e) => fillValue(e, ior)}
 				/>
 			</label>
 		</form>
