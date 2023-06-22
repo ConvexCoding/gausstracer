@@ -1,27 +1,20 @@
-<script lang="ts">
-	import { OrbitControls } from '@threlte/extras';
+<script>
+	import { OrbitControls, Text, interactivity } from '@threlte/extras';
 	import { T } from '@threlte/core';
-	import { Vector3 } from 'three';
 
-	export let camScale = 0.6;
+	export let scale = 0.75;
 	export const zoomOn = false;
-	export const rotateOn = true;
-	export const panOn = true;
-	export let camLoc: [number, number, number] = [-300, 0, 0];
-	export let camTarget: Vector3 = new Vector3(0, 0, 0);
-
-	let ref;
+	const rotateOn = true;
+	const panOn = true;
 </script>
 
 <T.OrthographicCamera
 	makeDefault
-	position={camLoc}
-	scale={camScale}
+	position={[-300, 0, 0]}
+	{scale}
 	on:create={({ ref }) => {
-		ref.lookAt(camTarget);
-		console.log(ref);
+		ref.lookAt(0, 0, 0);
 	}}
-	let:ref
 >
 	<OrbitControls enableZoom={zoomOn} enableRotate={rotateOn} enablePan={panOn} />
 </T.OrthographicCamera>

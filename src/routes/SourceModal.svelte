@@ -33,7 +33,7 @@
 	<div class="modal-example-form {cBase}">
 		<header class={cHeader}>{$modalStore[0].title ?? '(title missing)'}</header>
 		<!-- Enable for debugging: -->
-		<form class="modal-form {cForm}">
+		<form name="Frm" class="modal-form {cForm}" autocomplete="off">
 			<label class="Wavelength-label">
 				<span>Wavelength</span>
 				<input

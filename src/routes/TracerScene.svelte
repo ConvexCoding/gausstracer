@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Text, interactivity, TransformControls, OrbitControls } from '@threlte/extras';
-	import { T } from '@threlte/core';
+	import { T, useThrelte } from '@threlte/core';
 	import { BufferGeometry, DoubleSide, LineDashedMaterial, Object3D, Vector3 } from 'three';
 	import { Line2 } from 'three/examples/jsm/lines/Line2';
 	import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial';
@@ -18,7 +18,7 @@
 	import { genLineSegment, setAxisLimits, toGrid, genGridLines2, toWorld } from '$lib/mathUtils';
 	import Source from '$lib/source';
 	import GaussOp from '$lib/gaussop';
-	import { combineAdjacentDistances, distanceTo, findIndex, addLens } from '$lib/gaussop';
+	import { combineAdjacentDistances, addLens } from '$lib/gaussop';
 	import { getMeshIndex, getExtraKeyInfo, centerLine } from '$lib/meshUtils';
 	import { modalStore, type ModalComponent, type ModalSettings } from '@skeletonlabs/skeleton';
 	import HelpModal from './HelpModal.svelte';
@@ -26,15 +26,16 @@
 
 	export let gpin: GaussOp[] = [];
 	export let source: Source = new Source(1.07, 1, 0, 3);
+	export let resetView = 0;
 
 	const titletext = 'Gaussian Beam Tracer';
 	const showwaists = true;
 	const showSegLines = true;
 	const offsetbackground = 2;
-	let showEFLs = true;
-	let showDistances = false;
 
 	interactivity();
+
+	const { camera } = useThrelte();
 
 	// **************************************
 	// set canvas parameters and initial grid values
@@ -42,6 +43,11 @@
 	const horizDivs = 5;
 	const gridHeight = 75; // total grid height = 2 * gridHeight
 	const vertDivs = 5;
+
+	let camLoc: [number, number, number] = [-300, 0, 0];
+	let orbTarget: [number, number, number] = [0, 0, 0];
+	let camTarget: Vector3 = new Vector3(0, 0, 0);
+	let camScale: number = 0.6;
 
 	// **************************************
 	// calculate z or optical axis parameters
@@ -270,6 +276,28 @@
 			}
 		}
 
+		const PI = Math.PI;
+		// return to z-right, y-up orientation
+		if (e.ctrlKey && (e.key === 'o' || e.key === 'O')) {
+			resetControls(-1);
+		}
+
+		// remove last element in gp op array
+		if (e.ctrlKey && (e.key === 'z' || e.key === 'Z')) {
+			const modal: ModalSettings = {
+				type: 'confirm',
+				title: 'Please Confirm - Remove Last Op?',
+				body: 'Are you sure you want to remove last lens or distance?',
+				response: (r: boolean) => {
+					if (r) {
+						gpin = gpin.slice(0, -1);
+						upDateCanvas();
+					}
+				}
+			};
+			modalStore.trigger(modal);
+		}
+
 		// here for resetting system
 		if (e.ctrlKey && e.altKey && (e.key === 'r' || e.key === 'R')) {
 			const modal: ModalSettings = {
@@ -455,16 +483,27 @@
 		const point = e['point' as keyof MouseEvent] as unknown as Vector3;
 		const zloc = toWorld(point.z, zScale);
 		if (gpDragIndex >= 0 && gpDragIndex < gpin.length) {
-			gpin[gpDragIndex - 1].value = zloc - dragInitialPosition;
+			const moveto = zloc - dragInitialPosition;
+			gpin[gpDragIndex - 1].value = moveto >= 0 ? moveto : 0;
 			upDateCanvas();
 		}
 	}
+
+	function resetControls(test: number) {
+		console.log('resetControls', test);
+		camTarget = new Vector3(0, 0, 0);
+		camLoc = [-300, 0, 0];
+		camera.current.position.set(camLoc[0], camLoc[1], camLoc[2]);
+		camera.current.lookAt(camTarget.x, camTarget.y, camTarget.z);
+		upDateCanvas();
+	}
+	$: resetControls(resetView);
 </script>
 
 <svelte:window on:keydown={onKeyDown} />
 
 <!-- Add Camera and Lights-->
-<LightsCamera scale={0.6} zoomOn={false} />
+<LightsCamera zoomOn={false} {camLoc} {camTarget} {camScale} />
 
 <!-- plus & negative waist profile lines -->
 {#if showSegLines}
@@ -678,7 +717,7 @@
 </T.Group>
 
 <!-- Title -->
-<T.Mesh position={[100, gridHeight, -gridWidth]} rotation.y={-Math.PI / 2} visible={true}>
+<T.Mesh position={[100, gridHeight + 25, -gridWidth - 50]} rotation.y={-Math.PI / 2} visible={true}>
 	<Text text={titletext} color={'black'} fontSize={12} anchorX={'left'} anchorY={'bottom'} />
 </T.Mesh>
 

@@ -61,8 +61,14 @@
 			<div class="col-span-2">Append a distance element to end of system</div>
 			<div><i>Ctrl D or d</i></div>
 
+			<div class="col-span-2">Remove last lens or distance from system</div>
+			<div><i>Ctrl Z or z</i></div>
+
 			<div class="col-span-2">Reset to single distance element</div>
 			<div><i>Ctrl Alt R or r</i></div>
+
+			<div class="col-span-2">Reset view</div>
+			<div><i>Ctrl O or o</i></div>
 		</div>
 		<!-- prettier-ignore -->
 		<footer class="modal-footer {parent.regionFooter}">

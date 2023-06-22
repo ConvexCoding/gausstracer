@@ -39,22 +39,18 @@ export default class GaussOp {
 }
 
 export function combineAdjacentDistances(gaussOps: GaussOp[]): void {
-  let i = 0;
-  while (i < gaussOps.length) {
-    const currentOp = gaussOps[i];
-
-    if (currentOp.type === 'distance') {
-      let combinedDistance = currentOp.value;
-      const j = i + 1;
-      while (j < gaussOps.length && gaussOps[j].type === 'distance') {
-        combinedDistance += gaussOps[j].value;
-        gaussOps.splice(j, 1); // Remove the combined distance element
-      }
-      currentOp.value = combinedDistance;
-      i++; // Move to the next element after the combined distances
-    } else {
-      i++; // Move to the next element
+  const adjops: number[] = [];
+  for (let i = 0; i < gaussOps.length - 1; i++) {
+    if (gaussOps[i].type === 'distance' && gaussOps[i + 1].type === 'distance') {
+      adjops.push(i);
     }
+  }
+  if (adjops.length === 0) return;
+    // remove them in reverse order
+  for (let i = adjops.length - 1; i >= 0; i--) {
+    const index = adjops[i];
+    gaussOps[index].value += gaussOps[index + 1].value;
+    gaussOps.splice(index + 1, 1);
   }
 }
 
