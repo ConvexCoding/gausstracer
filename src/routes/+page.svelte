@@ -103,7 +103,7 @@
 	</div>
 </div>
 
-<div class="controls">
+<div class="absolute bg-gray-500 top-16 left-4 w-48 p-4">
 	<button
 		class="mb-5 text-white bg-blue-600 hover:bg-blue-800 focus:ring-4 focus:ring-blue-100 font-medium rounded-lg text-sm px-4 py-2.5 text-center inline-flex items-center"
 		type="button"
@@ -196,7 +196,7 @@
 		</div>
 	</div>
 </div>
-<div class="flex justify-center m-10">
+<div class="absolute top-16 right-4 p-4">
 	<button type="button" class="btn-icon bg-blue-600 hover:bg-blue-800" on:click={resetView}
 		><svg
 			xmlns="http://www.w3.org/2000/svg"
@@ -215,14 +215,5 @@
 	.contents1 {
 		height: 500px;
 		background-color: beige;
-	}
-
-	.controls {
-		position: absolute;
-		background-color: gray;
-		top: 4rem;
-		left: 1rem;
-		width: 12rem;
-		padding: 1rem;
 	}
 </style>
