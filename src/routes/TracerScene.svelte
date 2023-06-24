@@ -10,6 +10,7 @@
 		calcZend,
 		findMinWaists,
 		findWaistSizes,
+		gaussProfile,
 		generateLensData,
 		genLineSegArray,
 		genTypeMap
@@ -498,6 +499,8 @@
 		upDateCanvas();
 	}
 	$: resetControls(resetView);
+
+	const gdata = gaussProfile(3.0, 10);
 </script>
 
 <svelte:window on:keydown={onKeyDown} />
@@ -738,26 +741,24 @@
 	/>
 </T.Group>
 
-<!-- plus & negative waist profile lines -->
-<!--
-{#if showSolidLines}
-	<T.Mesh>
+<!-- Image Plane Button -->
+<T.Group position={[0, 0, gridWidth + 10]}>
+	<T.Mesh rotation.z={Math.PI / 2} visible={true} on:click={showHelp}>
+		<T.CylinderGeometry args={[10, 10, 1, 32]} />
+		<T.MeshStandardMaterial color={'tan'} />
+	</T.Mesh>
+
+	<T.Mesh position={[-5, -5, 0]}>
 		<T
 			is={Line2}
-			geometry={genLineSegment(linedata[0])}
-			material={new LineMaterial({ color: lineColor, linewidth: lineWidth })}
+			geometry={genLineSegment(gdata)}
+			material={new LineMaterial({
+				color: 0xff0000,
+				linewidth: 0.002
+			})}
+			name={'gLine'}
 			on:pointerenter={onLineEnter}
 			on:pointerleave={onLineLeave}
-			on:click={onclickLine}
-		/>
-		<T
-			is={Line2}
-			geometry={genLineSegment(linedata[1])}
-			material={new LineMaterial({ color: lineColor, linewidth: lineWidth })}
-			on:pointerenter={onLineEnter}
-			on:pointerleave={onLineLeave}
-			on:click={onclickLine}
 		/>
 	</T.Mesh>
-{/if}
--->
+</T.Group>

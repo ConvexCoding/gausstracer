@@ -580,3 +580,15 @@ export function points2ArrayX(x: number, y: number[], z: number[]): [Float32Arra
   }
   return [pluslinesegs, neglinesegs]
 }
+
+export function pointsToFloat32ArrayX(x: number, y: number[], z: number[]): Float32Array {
+  const numPoints = y.length;
+  console.log("🚀 ~ numPoints:", numPoints)
+  const data = new Float32Array(y.length * 3);
+  for (let i = 0; i < numPoints; i++) {
+    data[i * 3] = x;
+    data[i * 3 + 1] = y[i];
+    data[i * 3 + 2] = z[i]; 
+  }
+  return data
+}

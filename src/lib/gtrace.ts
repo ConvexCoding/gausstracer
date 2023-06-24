@@ -1,7 +1,7 @@
 import { type Complex, Matrix2DxComplex, waistSize, beamProps } from '$lib/gcomplex';
 import type Source from '$lib/source';
 import type GaussOp from '$lib/gaussop';
-import { genLensLathe2, points2ArrayX, toGrid } from '$lib/mathUtils';
+import { genLensLathe2, points2ArrayX, pointsToFloat32ArrayX, toGrid } from '$lib/mathUtils';
 import type { LatheGeometry } from 'three';
 
 	// define this interface - TODO: figure out how to do witout
@@ -127,6 +127,19 @@ export	function genLineSegArray(
   //maxY = setAxisLimits(0, temp)[1];
 
   return [psegs, nsegs];
+}
+
+export	function gaussProfile( waist: number, iMag: number): Float32Array {
+  const x: number[] = [];
+  const I: number[] = [];
+
+  for (let r = -1.5*waist; r <= 1.5*waist; r += 0.1) {
+    x.push(r);
+    I.push(iMag * Math.exp(-2 * r * r / (waist * waist)));
+  }
+  const data = pointsToFloat32ArrayX(0, I, x);
+  console.log(data)
+  return data;
 }
 
 // function for computing lens segs
