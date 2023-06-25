@@ -19,7 +19,7 @@
 	scale={camScale}
 	on:create={({ ref }) => {
 		ref.lookAt(camTarget);
-		console.log(ref);
+		//console.log('camera created');
 	}}
 	let:ref
 >

@@ -138,7 +138,7 @@ export	function gaussProfile( waist: number, iMag: number): Float32Array {
     I.push(iMag * Math.exp(-2 * r * r / (waist * waist)));
   }
   const data = pointsToFloat32ArrayX(0, I, x);
-  console.log(data)
+  //console.log(data)
   return data;
 }
 

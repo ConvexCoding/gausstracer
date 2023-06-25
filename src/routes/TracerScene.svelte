@@ -24,6 +24,7 @@
 	import { modalStore, type ModalComponent, type ModalSettings } from '@skeletonlabs/skeleton';
 	import HelpModal from './HelpModal.svelte';
 	import ModifyOpModal from './ModifyOpModal.svelte';
+	import GaussGraphModal from './GaussGraphModal.svelte';
 
 	export let gpin: GaussOp[] = [];
 	export let source: Source = new Source(1.07, 1, 0, 3);
@@ -339,7 +340,6 @@
 	}
 
 	function showHelp() {
-		const index = 1;
 		const c: ModalComponent = { ref: HelpModal };
 		const modal: ModalSettings = {
 			type: 'component',
@@ -348,6 +348,21 @@
 			body: 'Help - keys and functions',
 			response: (r: any) => {
 				console.log('help responded');
+			}
+		};
+		modalStore.trigger(modal);
+	}
+
+	function showGaussGraph() {
+		const c: ModalComponent = { ref: GaussGraphModal };
+		const modal: ModalSettings = {
+			type: 'component',
+			component: c,
+			title: 'Gauss Graphical Analysis',
+			body: 'Gauss Graphical Analysis',
+			value: ['waistLabel', waistSizes[waistSizes.length - 1]],
+			response: (r: any) => {
+				console.log('gauss graph exited');
 			}
 		};
 		modalStore.trigger(modal);
@@ -407,6 +422,8 @@
 
 	// find min waists for labeling
 	$: wps = findMinWaists(gpin, source, scaleY, zScale);
+
+	$: waistSizes = findWaistSizes(gpin, source);
 
 	// generate grid lines
 	$: gridLines = genGridLines2(0, gridWidth, horizDivs, gridHeight, vertDivs);
@@ -491,7 +508,6 @@
 	}
 
 	function resetControls(test: number) {
-		console.log('resetControls', test);
 		camTarget = new Vector3(0, 0, 0);
 		camLoc = [-300, 0, 0];
 		camera.current.position.set(camLoc[0], camLoc[1], camLoc[2]);
@@ -742,9 +758,9 @@
 </T.Group>
 
 <!-- Image Plane Button -->
-<T.Group position={[0, 0, gridWidth + 10]}>
-	<T.Mesh rotation.z={Math.PI / 2} visible={true} on:click={showHelp}>
-		<T.CylinderGeometry args={[10, 10, 1, 32]} />
+<T.Group position={[0, 0, gridWidth + 12]}>
+	<T.Mesh rotation.z={Math.PI / 2} visible={true} on:click={showGaussGraph}>
+		<T.CylinderGeometry args={[9, 9, 1, 32]} />
 		<T.MeshStandardMaterial color={'tan'} />
 	</T.Mesh>
 
@@ -757,8 +773,6 @@
 				linewidth: 0.002
 			})}
 			name={'gLine'}
-			on:pointerenter={onLineEnter}
-			on:pointerleave={onLineLeave}
 		/>
 	</T.Mesh>
 </T.Group>
