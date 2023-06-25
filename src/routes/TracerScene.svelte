@@ -359,7 +359,7 @@
 			type: 'component',
 			component: c,
 			title: 'Gauss Graphical Analysis',
-			body: 'Gauss Graphical Analysis',
+			body: 'Beam Radius & Power Density at Image Plane',
 			value: ['waistLabel', waistSizes[waistSizes.length - 1]],
 			response: (r: any) => {
 				console.log('gauss graph exited');

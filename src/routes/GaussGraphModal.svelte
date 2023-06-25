@@ -27,7 +27,8 @@
 {#if $modalStore[0]}
 	<div class="modal-example-form {cBase}">
 		<header class={cHeader}>{$modalStore[0].title ?? '(title missing)'}</header>
-		<div class="border bg-slate-50 border-surface-500 p-5 rounded-container-token">
+		<article>{$modalStore[0].body ?? '(body missing)'}</article>
+		<div class="border w-[608px] bg-slate-50 border-surface-500 p-5 rounded-container-token">
 			<Canvas>
 				<Gauss3DScene waistvalue={$modalStore[0].value[1]} ivalue={1.2} />
 			</Canvas>

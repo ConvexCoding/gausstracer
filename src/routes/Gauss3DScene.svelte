@@ -19,7 +19,13 @@
 	export let ivalue = 1.0;
 	let w0 = 0.6;
 	let i0 = ivalue;
-
+	const pkI = 100 / (Math.PI * waistvalue * waistvalue);
+	const pkIstr = pkI
+		.toFixed(0)
+		.toString()
+		.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+	console.log(pkIstr);
+	const pklabel = 'Pd: ' + pkIstr + ' watts/cm^2';
 	// Generate a 2d plot of peak intensity versus radial distance (2 * w0)
 	// where radial distance r is mapped to the z axis
 	// and the intensity Ir is mapped to the y axis
@@ -212,3 +218,7 @@
 		</T.Mesh>
 	</T.Group>
 </T.Group>
+
+<T.Mesh position={[0, 80, -290]} rotation.y={-Math.PI / 2} visible={true}>
+	<Text text={pklabel} color={'black'} fontSize={14} anchorX={'left'} anchorY={'middle'} />
+</T.Mesh>
