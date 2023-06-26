@@ -4,9 +4,9 @@
 	import { Vector3 } from 'three';
 
 	export let camScale = 0.6;
-	export const zoomOn = false;
-	export const rotateOn = true;
-	export const panOn = true;
+	export let zoomOn = false;
+	export let rotateOn = true;
+	export let panOn = true;
 	export let camLoc: [number, number, number] = [-300, 0, 0];
 	export let camTarget: Vector3 = new Vector3(0, 0, 0);
 
