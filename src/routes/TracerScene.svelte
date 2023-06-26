@@ -71,6 +71,8 @@
 	// calculate y axis parameters (waist size)
 	let maxY = 5; // manually set max y for now, it will be updated later
 	let scaleY = gridHeight / maxY; // scale about center of plot 0 in Y axis
+	maxY = calcZend(gpin) * 0.5;
+	scaleY = gridHeight / maxY;
 	upDateCanvas();
 
 	const yLabels: number[] = [];
@@ -204,6 +206,7 @@
 
 	function onKeyDown(e: KeyboardEvent) {
 		if ($modalStore[0]) return;
+		console.log('ekey=', e.key);
 		e.preventDefault();
 
 		// escape key to reset activated elements
@@ -412,6 +415,8 @@
 		//console.log(tempY, yLimit);
 		maxY = yLimit;
 		scaleY = gridHeight / maxY;
+		maxY = zend * 0.5;
+		scaleY = gridWidth / maxY;
 	}
 
 	$: [psegs, nsegs] = genLineSegArray(gpin, source, scaleY, zScale, zinc);
@@ -440,43 +445,13 @@
 		zScale
 	);
 
-	function changeElement(e: WheelEvent, type: string, incr: number) {
-		const objInfo = e['nativeEvent' as keyof MouseEvent] as unknown as Object3D;
-		const delta = objInfo['deltaY' as keyof Object] as unknown as number;
-		const elnumber = getMeshIndex(e, type);
-		if (delta < 0) {
-			gpin[elnumber].value += incr;
-		} else {
-			gpin[elnumber].value -= incr;
-		}
-	}
-
-	function canvasWheel(e: WheelEvent) {
-		const objInfo = e['nativeEvent' as keyof MouseEvent] as unknown as Object3D;
-		const delta = objInfo['deltaY' as keyof Object] as unknown as number;
-		if (gpLensIndex >= 0 && gpLensIndex < gpin.length) {
-			if (delta < 0) {
-				gpin[gpLensIndex].value += 1;
-			} else {
-				gpin[gpLensIndex].value -= 1;
-			}
-		}
-		if (gpDistIndex >= 0 && gpDistIndex < gpin.length) {
-			if (delta < 0) {
-				gpin[gpDistIndex].value += 5;
-			} else {
-				gpin[gpDistIndex].value -= 5;
-			}
-		}
-		upDateCanvas();
-	}
-
 	let dragInitialPosition = 0;
 	let dragcolor = 'lightblue';
 	function onDblClickLens(e: MouseEvent) {
 		const isCtrlKeyPressed = getExtraKeyInfo(e, 'ctrlKey');
 		const isAltKeyPressed = getExtraKeyInfo(e, 'altKey');
 		if (gpDragIndex < 0 && getMeshIndex(e, 'Lens') > 0) {
+			console.log('first double click on lens');
 			gpDragIndex = getMeshIndex(e, 'Lens');
 			dragcolor = gpin[gpDragIndex].color;
 			gpin[gpDragIndex].color = 'lightblue';
@@ -487,22 +462,12 @@
 					dragInitialPosition += gpin[i].value;
 				}
 			}
-			console.log(gpDragIndex, dragcolor);
+			//.log(gpDragIndex, dragcolor);
 		} else {
 			console.log('second double click on lens', dragcolor);
 			gpin[gpDragIndex].color = dragcolor;
 			gpDragIndex = -1;
 			dragInitialPosition = 0;
-			upDateCanvas();
-		}
-	}
-
-	function canvasMove(e: WheelEvent) {
-		const point = e['point' as keyof MouseEvent] as unknown as Vector3;
-		const zloc = toWorld(point.z, zScale);
-		if (gpDragIndex >= 0 && gpDragIndex < gpin.length) {
-			const moveto = zloc - dragInitialPosition;
-			gpin[gpDragIndex - 1].value = moveto >= 0 ? moveto : 0;
 			upDateCanvas();
 		}
 	}
@@ -522,7 +487,7 @@
 <svelte:window on:keydown={onKeyDown} />
 
 <!-- Add Camera and Lights-->
-<LightsCamera zoomOn={false} {camLoc} {camTarget} {camScale} />
+<LightsCamera zoomOn={true} {camLoc} {camTarget} {camScale} />
 
 <!-- plus & negative waist profile lines -->
 {#if showSegLines}
@@ -539,7 +504,6 @@
 				on:pointerenter={onLineEnter}
 				on:pointerleave={onLineLeave}
 				on:click={onclickLine}
-				on:wheel={(e) => changeElement(e, 'Line', 5)}
 			/>
 			<T
 				is={Line2}
@@ -552,7 +516,6 @@
 				on:pointerenter={onLineEnter}
 				on:pointerleave={onLineLeave}
 				on:click={onclickLine}
-				on:wheel={(e) => changeElement(e, 'Line', 5)}
 			/>
 		</T.Mesh>
 		{#if gpin[distanceMap[index]].tag}
@@ -581,7 +544,6 @@
 			on:pointerleave={onLensLeave}
 			on:click={onClickLens}
 			on:dblclick={onDblClickLens}
-			on:wheel={(e) => changeElement(e, 'Lens', 1)}
 			let:ref
 		>
 			<T.MeshPhongMaterial
@@ -649,13 +611,7 @@
 {/if}
 
 <!-- background plane - in this case along Y-Z aaxis -->
-<T.Mesh
-	position={[100 + offsetbackground, 0, 0]}
-	rotation={[0, 0, 0]}
-	visible={true}
-	on:wheel={(e) => canvasWheel(e)}
-	on:pointermove={(e) => canvasMove(e)}
->
+<T.Mesh position={[100 + offsetbackground, 0, 0]} rotation={[0, 0, 0]} visible={true}>
 	<T.BoxGeometry args={[1, 2 * gridHeight + 50, 2 * gridWidth + 100]} />
 	<T.MeshStandardMaterial side={DoubleSide} color={'white'} transparent opacity={1} />
 </T.Mesh>

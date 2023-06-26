@@ -3,7 +3,7 @@
 	import { T } from '@threlte/core';
 
 	export let scale = 0.75;
-	export const zoomOn = false;
+	export const zoomOn = true;
 	const rotateOn = true;
 	const panOn = true;
 </script>
@@ -16,7 +16,7 @@
 		ref.lookAt(0, 0, 0);
 	}}
 >
-	<OrbitControls enableZoom={zoomOn} enableRotate={rotateOn} enablePan={panOn} />
+	<OrbitControls enableZoom={true} enableRotate={rotateOn} enablePan={panOn} />
 </T.OrthographicCamera>
 
 <!-- Add Lights -->

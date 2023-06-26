@@ -98,7 +98,7 @@
 </div>
 
 <div class="mt-5 gap-0">
-	<div class="contents1">
+	<div class="h-[500px] bg-amber-50">
 		<Canvas>
 			<TracerScene gpin={gp} {source} resetView={resetNumber} />
 		</Canvas>
@@ -212,10 +212,3 @@
 		></button
 	>
 </div>
-
-<style>
-	.contents1 {
-		height: 500px;
-		background-color: beige;
-	}
-</style>
