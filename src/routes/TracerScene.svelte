@@ -472,6 +472,36 @@
 		}
 	}
 
+	function canvasMove(e: WheelEvent) {
+		const point = e['point' as keyof MouseEvent] as unknown as Vector3;
+		const zloc = toWorld(point.z, zScale);
+		if (gpDragIndex >= 0 && gpDragIndex < gpin.length) {
+			const moveto = zloc - dragInitialPosition;
+			gpin[gpDragIndex - 1].value = moveto >= 0 ? moveto : 0;
+			upDateCanvas();
+		}
+	}
+
+	function canvasWheel(e: WheelEvent) {
+		const objInfo = e['nativeEvent' as keyof MouseEvent] as unknown as Object3D;
+		const delta = objInfo['deltaY' as keyof Object] as unknown as number;
+		if (gpLensIndex >= 0 && gpLensIndex < gpin.length) {
+			if (delta < 0) {
+				gpin[gpLensIndex].value += 1;
+			} else {
+				gpin[gpLensIndex].value -= 1;
+			}
+		}
+		if (gpDistIndex >= 0 && gpDistIndex < gpin.length) {
+			if (delta < 0) {
+				gpin[gpDistIndex].value += 5;
+			} else {
+				gpin[gpDistIndex].value -= 5;
+			}
+		}
+		upDateCanvas();
+	}
+
 	function resetControls(test: number) {
 		camTarget = new Vector3(0, 0, 0);
 		camLoc = [-300, 0, 0];
@@ -611,7 +641,13 @@
 {/if}
 
 <!-- background plane - in this case along Y-Z aaxis -->
-<T.Mesh position={[100 + offsetbackground, 0, 0]} rotation={[0, 0, 0]} visible={true}>
+<T.Mesh
+	position={[100 + offsetbackground, 0, 0]}
+	rotation={[0, 0, 0]}
+	visible={true}
+	on:wheel={(e) => canvasWheel(e)}
+	on:pointermove={(e) => canvasMove(e)}
+>
 	<T.BoxGeometry args={[1, 2 * gridHeight + 50, 2 * gridWidth + 100]} />
 	<T.MeshStandardMaterial side={DoubleSide} color={'white'} transparent opacity={1} />
 </T.Mesh>
