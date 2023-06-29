@@ -243,13 +243,13 @@ export function generateLensData(
       case 'lens': {
         p = Matrix2DxComplex(op.toMatrix2D(), p);
         const rtemp = waistSize(p, tsource, tsource.index); // change 1 to material index if inside lens
-        radius.push(rtemp * 1.15);
+        radius.push(rtemp * 1.5);
         const posi: [number, number, number] = [0, 0, toGrid(ztrack, zScale)];
         lensPosi.push(posi);
         gop.push(op.clone());
         gopIndex.push(index);
-        eflLabelPosi.push([0, 1.2 * rtemp * scaleY, toGrid(ztrack, zScale)]);
-        geos.push(genLensLathe2(rtemp * 1.2, op.value, scaleZ, scaleY));
+        eflLabelPosi.push([0, 1.5 * rtemp * scaleY, toGrid(ztrack, zScale)]);
+        geos.push(genLensLathe2(rtemp * 1.4, op.value, scaleZ, scaleY));
         break;
       }
     }

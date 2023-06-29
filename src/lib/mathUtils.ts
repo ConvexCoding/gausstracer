@@ -31,23 +31,23 @@ export function genLensLathe2(ap: number, efl: number, xscale: number, yscale: n
   const pts2plus = []
   const step = ap / (divisionsperlensseg - 1)
 
-  const R = ap * 2;
+  const R = ap * 3;
   let Radius1 = 0;
   let Radius2 = 0;
   let ct = 0;
 
-  const ctoffset = 4 / xscale; // doing this produces a uniform for all xscales
-
+  const ctoffset = 0; // doing this produces a uniform for all xscales
   if (efl >= 0) {
     Radius1 = R;
     Radius2 = -R;
-    ct = 2 * calcSag(ap, Radius1, 0) + ctoffset;
+    ct = 1.2 * calcSag(ap, Radius1, 0) + ctoffset;
   }
 
+  const ctoffsetneg = 1; // doing this produces a uniform for all xscales
   if (efl < 0) {
     Radius1 = -R;
     Radius2 = R;
-    ct = ctoffset * 0.75;
+    ct = ctoffsetneg * 1;
   }
 
   // define lens arc

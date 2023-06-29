@@ -2,27 +2,18 @@
 	import { OrbitControls } from '@threlte/extras';
 	import { T } from '@threlte/core';
 	import { Vector3 } from 'three';
+	import { injectLookAtPlugin } from './lookAtPlugin';
 
 	export let camScale = 0.6;
 	export const zoomOn = true;
 	export const rotateOn = true;
 	export const panOn = true;
 	export let camLoc: [number, number, number] = [-300, 0, 0];
-	export let camTarget: Vector3 = new Vector3(0, 0, 0);
-
-	let ref;
+	export const camTarget: Vector3 = new Vector3(0, 0, 0);
+	injectLookAtPlugin();
 </script>
 
-<T.OrthographicCamera
-	makeDefault
-	position={camLoc}
-	scale={camScale}
-	on:create={({ ref }) => {
-		ref.lookAt(camTarget);
-		//console.log('camera created');
-	}}
-	let:ref
->
+<T.OrthographicCamera makeDefault position={camLoc} scale={camScale} lookAt={camTarget}>
 	<OrbitControls enableZoom={zoomOn} enableRotate={rotateOn} enablePan={panOn} />
 </T.OrthographicCamera>
 

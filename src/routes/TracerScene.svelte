@@ -506,7 +506,8 @@
 		camTarget = new Vector3(0, 0, 0);
 		camLoc = [-300, 0, 0];
 		camera.current.position.set(camLoc[0], camLoc[1], camLoc[2]);
-		camera.current.lookAt(camTarget.x, camTarget.y, camTarget.z);
+		camera.current.lookAt(camTarget);
+		//camera.current.rotation.set(0, -Math.PI / 2, 0);
 		upDateCanvas();
 	}
 	$: resetControls(resetView);
@@ -516,7 +517,7 @@
 
 <svelte:window on:keydown={onKeyDown} />
 
-<!-- Add Camera and Lights-->
+<!-- Add Camera and `Light`s-->
 <LightsCamera zoomOn={true} {camLoc} {camTarget} {camScale} />
 
 <!-- plus & negative waist profile lines -->
