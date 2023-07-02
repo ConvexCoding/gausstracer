@@ -1,20 +1,35 @@
 <script lang="ts">
 	import { OrbitControls } from '@threlte/extras';
 	import { T } from '@threlte/core';
-	import { Vector3 } from 'three';
-	import { injectLookAtPlugin } from './lookAtPlugin';
+	import { camPosition, lookAtPosition, camScale } from '../stores/camOrbitStore';
 
-	export let camScale = 0.6;
-	export const zoomOn = true;
-	export const rotateOn = true;
-	export const panOn = true;
-	export let camLoc: [number, number, number] = [-300, 0, 0];
-	export const camTarget: Vector3 = new Vector3(0, 0, 0);
-	injectLookAtPlugin();
+	export let ocEnabled: boolean = true;
 </script>
 
-<T.OrthographicCamera makeDefault position={camLoc} scale={camScale} lookAt={camTarget}>
-	<OrbitControls enableZoom={zoomOn} enableRotate={rotateOn} enablePan={panOn} />
+<T.OrthographicCamera
+	let:ref={cameraRef}
+	makeDefault
+	position.x={$camPosition.x}
+	position.y={$camPosition.y}
+	position.z={$camPosition.z}
+	fov={45}
+>
+	<OrbitControls
+		let:ref
+		enableZoom
+		enableDamping
+		dampingFactor={0.075}
+		on:change={() => {
+			if (ocEnabled) {
+				const { x, y, z } = cameraRef.position;
+				camPosition.set({ x, y, z }, { duration: 0 });
+				const newScale = cameraRef.scale;
+				camScale.set({ x: newScale.x, y: newScale.y, z: newScale.z }, { duration: 0 });
+			}
+		}}
+		target={[$lookAtPosition.x, $lookAtPosition.y, $lookAtPosition.z]}
+		enabled={ocEnabled}
+	/>
 </T.OrthographicCamera>
 
 <!-- Add Lights -->

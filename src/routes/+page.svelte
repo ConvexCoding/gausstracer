@@ -1,7 +1,6 @@
 <!-- YOU CAN DELETE EVERYTHING IN THIS PAGE -->
 <script lang="ts">
 	import { Canvas, forwardEventHandlers, useThrelte } from '@threlte/core';
-	import type { Object3D } from 'three';
 	import TracerScene from './TracerScene.svelte';
 	import GaussOp from '$lib/gaussop';
 	import Source from '$lib/source';
@@ -11,8 +10,8 @@
 		type ModalSettings,
 		modalStore
 	} from '@skeletonlabs/skeleton';
-	import { interactivity } from '@threlte/extras';
 	import SourceModal from './SourceModal.svelte';
+	import { camPosition, camScale, lookAtPosition } from '../stores/camOrbitStore';
 
 	// define Gaussian beam operations
 	const sf = 1;
@@ -32,10 +31,10 @@
 	gp.push(new GaussOp('lens', 100 / sf, 1, 'red'));
 	gp.push(new GaussOp('distance', 100 / sf)); // index 7
 
-	$: λ = 1.07;
+	$: λ = 10.6;
 	const waistInitialPosition = 0; // maybe future feature
 	$: msq = 1;
-	$: w0 = 1;
+	$: w0 = 20;
 	$: ior = 1;
 	$: source = new Source(λ, w0, waistInitialPosition, ior, msq);
 
@@ -87,9 +86,18 @@
 		modalStore.trigger(modal);
 	}
 
-	let resetNumber = 0;
-	function resetView() {
-		resetNumber++;
+	let ocEnabled = true;
+	const camScaleStart = { x: 0.6, y: 0.6, z: 0.6 };
+	const lookStart = { x: 0, y: 0, z: 0 };
+	const camStart = { x: -300, y: 0, z: 0 };
+	function resetScene() {
+		ocEnabled = false;
+		camScale.set(camScaleStart, { duration: 2000 }).then(() => (ocEnabled = true));
+		ocEnabled = false;
+		lookAtPosition.set(lookStart, { duration: 2000 }).then(() => (ocEnabled = true));
+		ocEnabled = false;
+		camPosition.set(camStart, { duration: 2000 }).then(() => (ocEnabled = true));
+		ocEnabled = false;
 	}
 </script>
 
@@ -100,7 +108,7 @@
 <div class="mt-5 gap-0">
 	<div class="h-[500px] bg-amber-50">
 		<Canvas>
-			<TracerScene gpin={gp} {source} resetView={resetNumber} />
+			<TracerScene gpin={gp} {source} {ocEnabled} />
 		</Canvas>
 	</div>
 </div>
@@ -145,12 +153,12 @@
 			accent="accent-surface-900 dark:accent-surface-300  mb-5"
 			bind:value={w0}
 			min={0.01}
-			max={10}
+			max={20}
 			step={0.01}
 		>
 			<div class="flex justify-between items-center">
 				<div class="text-xs font-bold">w0</div>
-				<div class="text-xs font-bold">{w0} / {10}</div>
+				<div class="text-xs font-bold">{w0} / {20}</div>
 			</div>
 		</RangeSlider>
 
@@ -199,7 +207,7 @@
 	</div>
 </div>
 <div class="absolute top-16 right-4 p-4">
-	<button type="button" class="btn-icon bg-blue-600 hover:bg-blue-800" on:click={resetView}
+	<button type="button" class="btn-icon bg-blue-600 hover:bg-blue-800" on:click={resetScene}
 		><svg
 			xmlns="http://www.w3.org/2000/svg"
 			fill="none"

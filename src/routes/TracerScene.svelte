@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Text, interactivity, TransformControls, OrbitControls } from '@threlte/extras';
+	import { Text, interactivity } from '@threlte/extras';
 	import { T, useThrelte } from '@threlte/core';
 	import { BufferGeometry, DoubleSide, LineDashedMaterial, Object3D, Vector3 } from 'three';
 	import { Line2 } from 'three/examples/jsm/lines/Line2';
@@ -28,7 +28,7 @@
 
 	export let gpin: GaussOp[] = [];
 	export let source: Source = new Source(1.07, 1, 0, 3);
-	export let resetView = 0;
+	export let ocEnabled: boolean;
 
 	const titletext = 'Gaussian Beam Tracer';
 	const showwaists = true;
@@ -36,8 +36,6 @@
 	const offsetbackground = 2;
 
 	interactivity();
-
-	const { camera } = useThrelte();
 
 	// **************************************
 	// set canvas parameters and initial grid values
@@ -284,7 +282,7 @@
 		const PI = Math.PI;
 		// return to z-right, y-up orientation
 		if (e.ctrlKey && (e.key === 'o' || e.key === 'O')) {
-			resetControls(-1);
+			resetControls();
 		}
 
 		// remove last element in gp op array
@@ -473,6 +471,7 @@
 	}
 
 	function canvasMove(e: WheelEvent) {
+		if (gpDragIndex < 0) return; // quick exit if user is zooming
 		const point = e['point' as keyof MouseEvent] as unknown as Vector3;
 		const zloc = toWorld(point.z, zScale);
 		if (gpDragIndex >= 0 && gpDragIndex < gpin.length) {
@@ -485,6 +484,7 @@
 	function canvasWheel(e: WheelEvent) {
 		const objInfo = e['nativeEvent' as keyof MouseEvent] as unknown as Object3D;
 		const delta = objInfo['deltaY' as keyof Object] as unknown as number;
+		if (gpLensIndex < 0 && gpDistIndex < 0) return; // quick exit if user is zooming
 		if (gpLensIndex >= 0 && gpLensIndex < gpin.length) {
 			if (delta < 0) {
 				gpin[gpLensIndex].value += 1;
@@ -502,15 +502,16 @@
 		upDateCanvas();
 	}
 
-	function resetControls(test: number) {
-		camTarget = new Vector3(0, 0, 0);
-		camLoc = [-300, 0, 0];
-		camera.current.position.set(camLoc[0], camLoc[1], camLoc[2]);
-		camera.current.lookAt(camTarget);
+	let { camera, scene, renderer } = useThrelte();
+	function resetControls() {
+		//camTarget = new Vector3(0, 0, 0);
+		//camLoc = [-300, 0, 0];
+		//camera.current.position.set(camLoc[0], camLoc[1], camLoc[2]);
+		//camera.current.lookAt(camTarget);
 		//camera.current.rotation.set(0, -Math.PI / 2, 0);
-		upDateCanvas();
+		//upDateCanvas();
+		console.log('camera', camera.current);
 	}
-	$: resetControls(resetView);
 
 	const gdata = gaussProfile(3.0, 10);
 </script>
@@ -518,7 +519,7 @@
 <svelte:window on:keydown={onKeyDown} />
 
 <!-- Add Camera and `Light`s-->
-<LightsCamera zoomOn={true} {camLoc} {camTarget} {camScale} />
+<LightsCamera {ocEnabled} />
 
 <!-- plus & negative waist profile lines -->
 {#if showSegLines}
