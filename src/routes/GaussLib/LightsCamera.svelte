@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { OrbitControls } from '@threlte/extras';
 	import { T } from '@threlte/core';
-	import { camPosition, lookAtPosition, camScale } from '../stores/camOrbitStore';
+	import { camPosition, lookAtPosition, camScale } from '../../stores/camOrbitStore';
 
 	export let ocEnabled: boolean = true;
 </script>

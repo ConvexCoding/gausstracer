@@ -1,7 +1,7 @@
 <!-- YOU CAN DELETE EVERYTHING IN THIS PAGE -->
 <script lang="ts">
 	import { Canvas, forwardEventHandlers, useThrelte } from '@threlte/core';
-	import TracerScene from './TracerScene.svelte';
+	import TracerScene from './GaussLib/TracerScene.svelte';
 	import GaussOp from '$lib/gaussop';
 	import Source from '$lib/source';
 	import {
@@ -10,7 +10,7 @@
 		type ModalSettings,
 		modalStore
 	} from '@skeletonlabs/skeleton';
-	import SourceModal from './SourceModal.svelte';
+	import SourceModal from './GaussLib/SourceModal.svelte';
 	import { camPosition, camScale, lookAtPosition } from '../stores/camOrbitStore';
 
 	// define Gaussian beam operations
